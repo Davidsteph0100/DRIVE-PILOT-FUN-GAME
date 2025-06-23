@@ -2,211 +2,202 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Lamborghini City Drive</title>
+  <title>3D Lamborghini City Drive</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
       margin: 0;
-      background: black;
       overflow: hidden;
+      background: black;
       font-family: Arial, sans-serif;
     }
 
-    #gameCanvas {
-      background: #1a1a1a;
+    canvas {
       display: block;
-      margin: 0 auto;
     }
 
-    .button {
+    #controls {
       position: absolute;
-      padding: 10px 15px;
-      color: white;
-      background: #444;
-      border: 1px solid #777;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 14px;
-      z-index: 10;
-    }
-
-    #pauseBtn { top: 10px; left: 10px; }
-    #restartBtn { top: 50px; left: 10px; }
-
-    .control-btn {
-      position: absolute;
-      width: 80px;
-      height: 40px;
-      font-size: 12px;
-      color: white;
-      background: #0066cc;
-      border: none;
-      border-radius: 6px;
-      z-index: 10;
-    }
-
-    #steeringLeft { bottom: 20px; left: 10px; }
-    #steeringRight { bottom: 20px; left: 100px; }
-    #brake { bottom: 20px; right: 100px; background: #cc0000; }
-    #accelerate { bottom: 20px; right: 10px; background: #00cc00; }
-
-    #gameOverText {
-      position: absolute;
-      top: 50%;
+      bottom: 20px;
       left: 50%;
-      transform: translate(-50%, -50%);
-      color: red;
-      font-size: 32px;
-      font-weight: bold;
-      display: none;
-      z-index: 20;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 20px;
     }
+
+    #steering {
+      width: 120px;
+      height: 120px;
+      background: rgba(0,0,0,0.5);
+      border: 4px solid #999;
+      border-radius: 50%;
+      touch-action: none;
+      position: relative;
+    }
+
+    #steeringKnob {
+      width: 30px;
+      height: 30px;
+      background: gold;
+      border-radius: 50%;
+      position: absolute;
+      top: 45px;
+      left: 45px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      color: white;
+    }
+
+    #accelerate { background: green; }
+    #brake { background: red; }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div id="controls">
+    <div id="steering"><div id="steeringKnob"></div></div>
+    <button id="accelerate">Accelerate</button>
+    <button id="brake">Brake</button>
+  </div>
 
-  <!-- Control Buttons -->
-  <button id="pauseBtn" class="button">Pause</button>
-  <button id="restartBtn" class="button">Restart</button>
-  <button id="steeringLeft" class="control-btn">◀ Left</button>
-  <button id="steeringRight" class="control-btn">Right ▶</button>
-  <button id="brake" class="control-btn">Brake</button>
-  <button id="accelerate" class="control-btn">Accelerate</button>
-  <div id="gameOverText">GAME OVER</div>
-
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
   <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    let scene = new THREE.Scene();
+    let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 2000);
+    let renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-    let car = {
-      x: canvas.width / 2 - 15,
-      y: canvas.height - 80,
-      width: 30,
-      height: 60,
-      speed: 0,
-      angle: 0
-    };
+    // LIGHT
+    let light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(50, 200, 100);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0x404040));
 
-    const buildings = [];
-    const roadWidth = canvas.width * 0.9;
-    const roadX = (canvas.width - roadWidth) / 2;
-    let gameRunning = true;
+    // ROAD
+    let road = new THREE.Mesh(
+      new THREE.BoxGeometry(100, 1, 2000),
+      new THREE.MeshPhongMaterial({ color: 0x222222 })
+    );
+    road.position.y = -0.5;
+    scene.add(road);
 
-    function drawCar() {
-      ctx.save();
-      ctx.translate(car.x + car.width / 2, car.y + car.height / 2);
-      ctx.rotate(car.angle);
-      ctx.fillStyle = 'gold';
-      ctx.fillRect(-car.width / 2, -car.height / 2, car.width, car.height);
-      ctx.restore();
+    // CAR (Lamborghini block)
+    let car = new THREE.Mesh(
+      new THREE.BoxGeometry(6, 2, 10),
+      new THREE.MeshPhongMaterial({ color: 0xffff00 })
+    );
+    car.position.set(0, 1, 0);
+    scene.add(car);
+
+    // BUILDINGS
+    for (let i = 0; i < 50; i++) {
+      let bHeight = Math.random() * 100 + 200; // 30-storey approx
+      let building = new THREE.Mesh(
+        new THREE.BoxGeometry(20, bHeight, 20),
+        new THREE.MeshPhongMaterial({ color: 0x999999 })
+      );
+      building.position.set(
+        (Math.random() > 0.5 ? 60 : -60) + Math.random() * 20,
+        bHeight / 2,
+        -1000 + Math.random() * 2000
+      );
+      scene.add(building);
     }
 
-    function drawRoad() {
-      ctx.fillStyle = '#333';
-      ctx.fillRect(roadX, 0, roadWidth, canvas.height);
+    // CAMERA FOLLOW
+    camera.position.set(0, 50, 60);
+    camera.lookAt(car.position);
+
+    // CAR CONTROL
+    let speed = 0;
+    let angle = 0;
+    let steerAngle = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Movement logic
+      angle += steerAngle * (speed / 5);
+      car.rotation.y = angle;
+
+      car.position.x -= Math.sin(angle) * speed;
+      car.position.z -= Math.cos(angle) * speed;
+
+      // Camera follow
+      camera.position.x = car.position.x;
+      camera.position.z = car.position.z + 60;
+      camera.lookAt(car.position);
+
+      renderer.render(scene, camera);
     }
+    animate();
 
-    function drawBuildings() {
-      ctx.fillStyle = '#999'; // brighter color
-      for (let b of buildings) {
-        ctx.fillRect(b.x, b.y, b.width, b.height);
-      }
-    }
+    // Controls
+    let accelerating = false, braking = false;
 
-    function updateBuildings() {
-      for (let b of buildings) {
-        b.y += car.speed;
-      }
-      if (Math.random() < 0.04) {
-        const width = 40;
-        const height = 600; // tall
-        const isLeft = Math.random() < 0.5;
+    setInterval(() => {
+      if (accelerating && speed < 2) speed += 0.05;
+      if (braking && speed > 0) speed -= 0.05;
+    }, 100);
 
-        const x = isLeft
-          ? Math.random() * (roadX - width)
-          : roadX + roadWidth + Math.random() * (canvas.width - (roadX + roadWidth) - width);
+    document.getElementById('accelerate').addEventListener('mousedown', () => accelerating = true);
+    document.getElementById('accelerate').addEventListener('mouseup', () => accelerating = false);
+    document.getElementById('brake').addEventListener('mousedown', () => braking = true);
+    document.getElementById('brake').addEventListener('mouseup', () => braking = false);
 
-        buildings.push({ x, y: -height, width, height });
-      }
-    }
+    // Steering Wheel (drag logic)
+    const steering = document.getElementById('steering');
+    const knob = document.getElementById('steeringKnob');
 
-    function checkCollision() {
-      for (let b of buildings) {
-        if (
-          car.x < b.x + b.width &&
-          car.x + car.width > b.x &&
-          car.y < b.y + b.height &&
-          car.y + car.height > b.y
-        ) {
-          endGame();
-        }
-      }
-      if (car.x < roadX || car.x + car.width > roadX + roadWidth) {
-        endGame();
-      }
-    }
+    let dragging = false;
 
-    function endGame() {
-      gameRunning = false;
-      document.getElementById('gameOverText').style.display = 'block';
-    }
-
-    function gameLoop() {
-      if (!gameRunning) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawRoad();
-      updateBuildings();
-      drawBuildings();
-      drawCar();
-      checkCollision();
-      requestAnimationFrame(gameLoop);
-    }
-
-    function resetGame() {
-      car.x = canvas.width / 2 - 15;
-      car.y = canvas.height - 80;
-      car.speed = 0;
-      car.angle = 0;
-      buildings.length = 0;
-      gameRunning = true;
-      document.getElementById('gameOverText').style.display = 'none';
-      gameLoop();
-    }
-
-    // Button Events
-    document.getElementById('accelerate').addEventListener('mousedown', () => {
-      if (car.speed < 6) car.speed += 0.5;
+    steering.addEventListener('touchstart', e => {
+      dragging = true;
     });
 
-    document.getElementById('brake').addEventListener('mousedown', () => {
-      if (car.speed > 0) car.speed -= 0.5;
+    steering.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      let rect = steering.getBoundingClientRect();
+      let centerX = rect.left + rect.width / 2;
+      let centerY = rect.top + rect.height / 2;
+
+      let touch = e.touches[0];
+      let dx = touch.clientX - centerX;
+      let dy = touch.clientY - centerY;
+      let theta = Math.atan2(dy, dx);
+
+      steerAngle = -theta * 0.03;
+      knob.style.left = `${60 + dx * 0.3 - 15}px`;
+      knob.style.top = `${60 + dy * 0.3 - 15}px`;
     });
 
-    document.getElementById('steeringLeft').addEventListener('mousedown', () => {
-      car.x -= 10;
-      car.angle = -0.1;
-      setTimeout(() => car.angle = 0, 100);
+    steering.addEventListener('touchend', () => {
+      dragging = false;
+      steerAngle = 0;
+      knob.style.left = '45px';
+      knob.style.top = '45px';
     });
 
-    document.getElementById('steeringRight').addEventListener('mousedown', () => {
-      car.x += 10;
-      car.angle = 0.1;
-      setTimeout(() => car.angle = 0, 100);
+    // PC Steering
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') steerAngle = 0.05;
+      if (e.key === 'ArrowRight') steerAngle = -0.05;
+      if (e.key === 'ArrowUp') accelerating = true;
+      if (e.key === 'ArrowDown') braking = true;
     });
-
-    document.getElementById('pauseBtn').addEventListener('click', () => {
-      gameRunning = !gameRunning;
-      if (gameRunning) gameLoop();
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') steerAngle = 0;
+      if (e.key === 'ArrowUp') accelerating = false;
+      if (e.key === 'ArrowDown') braking = false;
     });
-
-    document.getElementById('restartBtn').addEventListener('click', resetGame);
-
-    // Start
-    resetGame();
   </script>
 </body>
 </html>

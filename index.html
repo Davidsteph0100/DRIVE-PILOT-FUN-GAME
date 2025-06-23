@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lambo City Drive</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      background: black;
+      overflow: hidden;
+      font-family: 'Arial', sans-serif;
+    }
+    canvas {
+      background: #1a1a1a;
+      display: block;
+    }
+    #steering {
+      position: absolute;
+      bottom: 80px;
+      right: 30px;
+      width: 120px;
+      height: 120px;
+      opacity: 0.9;
+      z-index: 2;
+      border-radius: 50%;
+    }
+    #gameOver {
+      position: absolute;
+      top: 40%;
+      width: 100%;
+      text-align: center;
+      color: red;
+      font-size: 2em;
+      display: none;
+      z-index: 3;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <img id="steering" src="https://i.imgur.com/2cMZjZd.png" alt="Steering Wheel">
+  <div id="gameOver">🚧 Game Over! Tap to Restart 🚧</div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const gameOverText = document.getElementById('gameOver');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let car = {
+      x: canvas.width / 2 - 20,
+      y: canvas.height - 100,
+      width: 40,
+      height: 70,
+      color: '#FFD700',
+      direction: 0
+    };
+
+    let buildings = [], cars = [], barricades = [];
+    let gameRunning = true;
+
+    function spawnObstacles() {
+      for (let i = 0; i < 6; i++) {
+        buildings.push({
+          x: Math.random() * canvas.width,
+          y: -Math.random() * canvas.height * 2,
+          width: 50,
+          height: 50,
+          color: '#333'
+        });
+        cars.push({
+          x: Math.random() * canvas.width,
+          y: -Math.random() * canvas.height * 2,
+          width: 40,
+          height: 70,
+          color: '#ff4444'
+        });
+        barricades.push({
+          x: Math.random() * canvas.width,
+          y: -Math.random() * canvas.height * 2,
+          width: 30,
+          height: 30,
+          color: '#00ffff'
+        });
+      }
+    }
+
+    function drawCar(c) {
+      ctx.fillStyle = c.color;
+      ctx.fillRect(c.x, c.y, c.width, c.height);
+    }
+
+    function moveAndDrawObstacles() {
+      [...buildings, ...cars, ...barricades].forEach(obj => {
+        obj.y += 3;
+        ctx.fillStyle = obj.color;
+        ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
+
+        // Collision detection
+        if (
+          car.x < obj.x + obj.width &&
+          car.x + car.width > obj.x &&
+          car.y < obj.y + obj.height &&
+          car.y + car.height > obj.y
+        ) {
+          gameOver();
+        }
+
+        if (obj.y > canvas.height) {
+          obj.y = -50;
+          obj.x = Math.random() * canvas.width;
+        }
+      });
+    }
+
+    function gameOver() {
+      gameRunning = false;
+      gameOverText.style.display = 'block';
+    }
+
+    function resetGame() {
+      car.x = canvas.width / 2 - 20;
+      car.y = canvas.height - 100;
+      gameOverText.style.display = 'none';
+      gameRunning = true;
+      buildings = [];
+      cars = [];
+      barricades = [];
+      spawnObstacles();
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Road background lines
+      ctx.fillStyle = '#444';
+      for (let i = 0; i < canvas.height; i += 40) {
+        ctx.fillRect(canvas.width / 2 - 2, i, 4, 20);
+      }
+
+      moveAndDrawObstacles();
+
+      car.x += car.direction;
+      car.x = Math.max(0, Math.min(car.x, canvas.width - car.width));
+      drawCar(car);
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Touch control
+    const steering = document.getElementById('steering');
+    steering.addEventListener('touchstart', e => {
+      const touchX = e.touches[0].clientX;
+      if (touchX > canvas.width / 2) {
+        car.direction = 4; // right
+      } else {
+        car.direction = -4; // left
+      }
+    });
+
+    steering.addEventListener('touchend', () => {
+      car.direction = 0;
+    });
+
+    // Tap to restart
+    canvas.addEventListener('click', () => {
+      if (!gameRunning) resetGame();
+    });
+
+    spawnObstacles();
+    gameLoop();
+  </script>
+</body>
+</html>

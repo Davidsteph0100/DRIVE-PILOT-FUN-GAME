@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <title>Lamborghini City Drive</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       background: black;
@@ -21,32 +25,33 @@
       position: absolute;
       padding: 10px 15px;
       color: white;
-      background: #222;
-      border: 1px solid #555;
+      background: #444;
+      border: 1px solid #777;
       border-radius: 5px;
       cursor: pointer;
-      z-index: 10;
       font-size: 14px;
+      z-index: 10;
     }
 
     #pauseBtn { top: 10px; left: 10px; }
     #restartBtn { top: 50px; left: 10px; }
 
-    #accelerate, #brake, #steeringLeft, #steeringRight {
+    .control-btn {
       position: absolute;
-      bottom: 30px;
-      padding: 10px;
-      background: rgba(255,255,255,0.1);
+      width: 80px;
+      height: 40px;
+      font-size: 12px;
       color: white;
-      border: 1px solid #999;
-      border-radius: 5px;
+      background: #0066cc;
+      border: none;
+      border-radius: 6px;
       z-index: 10;
     }
 
-    #accelerate { right: 20px; }
-    #brake { right: 120px; }
-    #steeringLeft { left: 20px; }
-    #steeringRight { left: 120px; }
+    #steeringLeft { bottom: 20px; left: 10px; }
+    #steeringRight { bottom: 20px; left: 100px; }
+    #brake { bottom: 20px; right: 100px; background: #cc0000; }
+    #accelerate { bottom: 20px; right: 10px; background: #00cc00; }
 
     #gameOverText {
       position: absolute;
@@ -63,12 +68,14 @@
 </head>
 <body>
   <canvas id="gameCanvas" width="400" height="600"></canvas>
-  <div id="pauseBtn" class="button">Pause</div>
-  <div id="restartBtn" class="button">Restart</div>
-  <div id="accelerate">Accelerate</div>
-  <div id="brake">Brake</div>
-  <div id="steeringLeft">◀ Left</div>
-  <div id="steeringRight">Right ▶</div>
+
+  <!-- Control Buttons -->
+  <button id="pauseBtn" class="button">Pause</button>
+  <button id="restartBtn" class="button">Restart</button>
+  <button id="steeringLeft" class="control-btn">◀ Left</button>
+  <button id="steeringRight" class="control-btn">Right ▶</button>
+  <button id="brake" class="control-btn">Brake</button>
+  <button id="accelerate" class="control-btn">Accelerate</button>
   <div id="gameOverText">GAME OVER</div>
 
   <script>
@@ -104,7 +111,7 @@
     }
 
     function drawBuildings() {
-      ctx.fillStyle = '#444';
+      ctx.fillStyle = '#999'; // brighter color
       for (let b of buildings) {
         ctx.fillRect(b.x, b.y, b.width, b.height);
       }
@@ -116,7 +123,7 @@
       }
       if (Math.random() < 0.04) {
         const width = 40;
-        const height = 600; // tall like 30 storeys
+        const height = 600; // tall
         const isLeft = Math.random() < 0.5;
 
         const x = isLeft
@@ -170,7 +177,7 @@
       gameLoop();
     }
 
-    // Controls
+    // Button Events
     document.getElementById('accelerate').addEventListener('mousedown', () => {
       if (car.speed < 6) car.speed += 0.5;
     });

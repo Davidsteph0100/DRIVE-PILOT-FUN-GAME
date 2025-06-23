@@ -1,21 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lambo City Drive</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lambo Drive</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body, html {
-      width: 100%;
+    html, body {
       height: 100%;
-      background: black;
+      background: #000;
       overflow: hidden;
       font-family: Arial, sans-serif;
     }
     canvas {
+      background: #111;
       display: block;
-      background: #0f0f0f;
     }
     #controls {
       position: absolute;
@@ -26,20 +25,11 @@
     #controls button {
       margin: 5px;
       padding: 8px 14px;
-      font-size: 16px;
-      font-weight: bold;
+      font-size: 14px;
       background: #444;
       color: gold;
       border: 2px solid gold;
-      border-radius: 8px;
-    }
-    #steeringArea {
-      position: absolute;
-      bottom: 80px;
-      right: 30px;
-      width: 120px;
-      height: 120px;
-      z-index: 2;
+      border-radius: 6px;
     }
     #gameOver {
       position: absolute;
@@ -51,6 +41,35 @@
       display: none;
       z-index: 3;
     }
+    .pedal {
+      position: absolute;
+      width: 70px;
+      height: 70px;
+      background: #222;
+      border: 2px solid gold;
+      color: gold;
+      text-align: center;
+      line-height: 70px;
+      font-weight: bold;
+      border-radius: 10px;
+      z-index: 3;
+    }
+    #accelerate {
+      bottom: 100px;
+      right: 30px;
+    }
+    #brake {
+      bottom: 20px;
+      right: 30px;
+    }
+    #steering {
+      position: absolute;
+      bottom: 40px;
+      left: 30px;
+      width: 120px;
+      height: 120px;
+      z-index: 3;
+    }
   </style>
 </head>
 <body>
@@ -58,37 +77,44 @@
     <button onclick="pauseGame()">Pause</button>
     <button onclick="resetGame()">Restart</button>
   </div>
+
   <canvas id="gameCanvas"></canvas>
-  <div id="steeringArea"></div>
+  <div id="steering"></div>
+  <div id="accelerate" class="pedal">Gas</div>
+  <div id="brake" class="pedal">Brake</div>
   <div id="gameOver">🚧 Game Over! Tap to Restart 🚧</div>
 
   <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const steering = document.getElementById('steeringArea');
-    const gameOverText = document.getElementById('gameOver');
+    const gameOverText = document.getElementById("gameOver");
+    const accelerateBtn = document.getElementById("accelerate");
+    const brakeBtn = document.getElementById("brake");
+    const steering = document.getElementById("steering");
 
     let car = {
       x: canvas.width / 2 - 20,
       y: canvas.height - 100,
       width: 40,
       height: 70,
-      color: '#FFD700',
+      color: "#FFD700",
+      speed: 0,
+      maxSpeed: 6,
       direction: 0
     };
 
     let buildings = [], cars = [], barricades = [];
-    let gameRunning = true;
-    let gamePaused = false;
+    let gameRunning = true, gamePaused = false;
+    let steeringAngle = 0;
 
     function spawnObstacles() {
       for (let i = 0; i < 6; i++) {
-        buildings.push({ x: randX(), y: randY(), width: 50, height: 50, color: '#333' });
-        cars.push({ x: randX(), y: randY(), width: 40, height: 70, color: '#ff4444' });
-        barricades.push({ x: randX(), y: randY(), width: 30, height: 30, color: '#00ffff' });
+        buildings.push({ x: randX(), y: randY(), width: 50, height: 50, color: "#333" });
+        cars.push({ x: randX(), y: randY(), width: 40, height: 70, color: "#ff4444" });
+        barricades.push({ x: randX(), y: randY(), width: 30, height: 30, color: "#00ffff" });
       }
     }
 
@@ -107,7 +133,7 @@
 
     function moveAndDrawObstacles() {
       [...buildings, ...cars, ...barricades].forEach(obj => {
-        obj.y += 3;
+        obj.y += car.speed;
         ctx.fillStyle = obj.color;
         ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
 
@@ -128,10 +154,32 @@
     }
 
     function drawRoad() {
-      ctx.fillStyle = '#222';
+      ctx.fillStyle = "#222";
       for (let i = 0; i < canvas.height; i += 40) {
         ctx.fillRect(canvas.width / 2 - 2, i, 4, 20);
       }
+    }
+
+    function drawSteeringWheel() {
+      const centerX = 90;
+      const centerY = canvas.height - 80;
+
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(steeringAngle * Math.PI / 180);
+      ctx.beginPath();
+      ctx.arc(0, 0, 50, 0, Math.PI * 2);
+      ctx.fillStyle = "gold";
+      ctx.fill();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = "#444";
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(-25, 0);
+      ctx.lineTo(25, 0);
+      ctx.stroke();
+      ctx.restore();
     }
 
     function gameLoop() {
@@ -144,31 +192,14 @@
       car.x += car.direction;
       car.x = Math.max(0, Math.min(car.x, canvas.width - car.width));
       drawCar(car);
-
-      drawSteering();
+      drawSteeringWheel();
 
       requestAnimationFrame(gameLoop);
     }
 
-    function drawSteering() {
-      const x = canvas.width - 90;
-      const y = canvas.height - 130;
-      ctx.beginPath();
-      ctx.arc(x, y, 50, 0, Math.PI * 2);
-      ctx.fillStyle = 'gold';
-      ctx.fill();
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = 6;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x - 25, y);
-      ctx.lineTo(x + 25, y);
-      ctx.stroke();
-    }
-
     function gameOver() {
       gameRunning = false;
-      gameOverText.style.display = 'block';
+      gameOverText.style.display = "block";
     }
 
     function pauseGame() {
@@ -179,7 +210,8 @@
     function resetGame() {
       car.x = canvas.width / 2 - 20;
       car.y = canvas.height - 100;
-      gameOverText.style.display = 'none';
+      car.speed = 0;
+      gameOverText.style.display = "none";
       gameRunning = true;
       gamePaused = false;
       buildings = [];
@@ -189,24 +221,33 @@
       gameLoop();
     }
 
-    steering.addEventListener('touchstart', e => {
-      const touchX = e.touches[0].clientX;
-      if (touchX > canvas.width / 2) {
-        car.direction = 4;
-      } else {
+    // Pedals
+    accelerateBtn.addEventListener("touchstart", () => car.speed = car.maxSpeed);
+    accelerateBtn.addEventListener("touchend", () => car.speed = 3);
+
+    brakeBtn.addEventListener("touchstart", () => car.speed = 1);
+    brakeBtn.addEventListener("touchend", () => car.speed = 3);
+
+    // Steering Control
+    steering.addEventListener("touchstart", e => {
+      const x = e.touches[0].clientX;
+      if (x < canvas.width / 2) {
         car.direction = -4;
+        steeringAngle = -25;
+      } else {
+        car.direction = 4;
+        steeringAngle = 25;
       }
     });
-
-    steering.addEventListener('touchend', () => {
+    steering.addEventListener("touchend", () => {
       car.direction = 0;
+      steeringAngle = 0;
     });
 
-    canvas.addEventListener('click', () => {
+    canvas.addEventListener("click", () => {
       if (!gameRunning) resetGame();
     });
 
-    // Start
     spawnObstacles();
     gameLoop();
   </script>

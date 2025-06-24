@@ -201,6 +201,10 @@
       camera.position.z = car.position.z + 60;
       camera.lookAt(car.position);
 
+      if (!isGameOver && checkCollision()) {
+  gameOver();
+}
+
       renderer.render(scene, camera);
     }
     animate();

@@ -18,13 +18,12 @@
     #controls {
       position: absolute;
       bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
+      width: 100%;
       display: flex;
-      flex-direction: row;
+      justify-content: space-between;
       align-items: center;
-      gap: 20px;
+      padding: 0 20px;
+      z-index: 10;
     }
 
     #steering {
@@ -33,18 +32,24 @@
       border-radius: 50%;
       touch-action: none;
       position: relative;
-      transform: translateX(-50%) rotate(0deg);
       background: conic-gradient(gold 0deg 180deg, green 180deg 360deg);
       border: 8px solid transparent;
       box-sizing: border-box;
       transition: transform 0.05s linear;
     }
 
+    .pedals {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
     button {
-      padding: 10px 20px;
-      font-size: 16px;
+      width: 120px;
+      height: 80px;
+      font-size: 18px;
       border: none;
-      border-radius: 10px;
+      border-radius: 12px;
       cursor: pointer;
       color: white;
     }
@@ -55,9 +60,11 @@
 </head>
 <body>
   <div id="controls">
+    <div class="pedals">
+      <button id="brake">Brake</button>
+      <button id="accelerate">Accelerate</button>
+    </div>
     <div id="steering"></div>
-    <button id="accelerate">Accelerate</button>
-    <button id="brake">Brake</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
@@ -112,18 +119,21 @@
 
     function animate() {
       requestAnimationFrame(animate);
+
       angle += steerAngle * (speed / 5);
       car.rotation.y = angle;
       car.position.x -= Math.sin(angle) * speed;
       car.position.z -= Math.cos(angle) * speed;
+
       camera.position.x = car.position.x;
       camera.position.z = car.position.z + 60;
       camera.lookAt(car.position);
+
       renderer.render(scene, camera);
     }
     animate();
 
-    // Button controls
+    // Pedal Controls
     let accelerating = false, braking = false;
 
     setInterval(() => {
@@ -136,7 +146,7 @@
     document.getElementById('brake').addEventListener('mousedown', () => braking = true);
     document.getElementById('brake').addEventListener('mouseup', () => braking = false);
 
-    // Realistic continuous steering
+    // Realistic Steering
     const steering = document.getElementById('steering');
     let dragging = false;
     let currentRotation = 0;
@@ -167,26 +177,34 @@
 
       currentRotation += delta * 180 / Math.PI;
       currentRotation = Math.max(-180, Math.min(180, currentRotation)); // clamp
-      steering.style.transform = `translateX(-50%) rotate(${currentRotation}deg)`;
+      steering.style.transform = `rotate(${currentRotation}deg)`;
       lastAngle = angleNow;
 
-      steerAngle = -currentRotation * 0.0015; // converts degrees to steering effect
+      steerAngle = -currentRotation * 0.0015;
     });
 
     steering.addEventListener('touchend', () => {
       dragging = false;
-      steerAngle = 0;
-      currentRotation = 0;
-      steering.style.transform = `translateX(-50%) rotate(0deg)`;
     });
 
-    // PC keyboard
+    // Gradual steering reset
+    setInterval(() => {
+      if (!dragging && currentRotation !== 0) {
+        currentRotation *= 0.9;
+        if (Math.abs(currentRotation) < 0.5) currentRotation = 0;
+        steering.style.transform = `rotate(${currentRotation}deg)`;
+        steerAngle = -currentRotation * 0.0015;
+      }
+    }, 16); // roughly 60 FPS
+
+    // PC Keyboard support
     window.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') steerAngle = 0.05;
       if (e.key === 'ArrowRight') steerAngle = -0.05;
       if (e.key === 'ArrowUp') accelerating = true;
       if (e.key === 'ArrowDown') braking = true;
     });
+
     window.addEventListener('keyup', (e) => {
       if (['ArrowLeft', 'ArrowRight'].includes(e.key)) steerAngle = 0;
       if (e.key === 'ArrowUp') accelerating = false;

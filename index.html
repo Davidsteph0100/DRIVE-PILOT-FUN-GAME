@@ -43,6 +43,47 @@
     }
     #accelerate { background: green; }
     #brake { background: red; }
+    #gameOverScreen {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+#gameOverCard {
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 0 40px gold;
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+  color: black;
+}
+
+#gameOverCard h1 {
+  font-size: 36px;
+  color: red;
+}
+
+#gameOverCard button {
+  padding: 15px 30px;
+  background: linear-gradient(to right, gold, green);
+  border: none;
+  font-size: 20px;
+  color: white;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+#gameOverCard button:hover {
+  opacity: 0.9;
+}
   </style>
 </head>
 <body>

@@ -28,14 +28,18 @@
     }
 
     #steering {
-      width: 240px; /* doubled */
+      width: 240px;
       height: 240px;
-      background: rgba(0, 0, 0, 0.5);
-      border: 8px solid #999; /* thicker border for bigger size */
       border-radius: 50%;
       touch-action: none;
       position: relative;
       transform: translateX(-50%);
+      background: conic-gradient(
+        gold 0deg 180deg,
+        green 180deg 360deg
+      );
+      border: 8px solid transparent;
+      box-sizing: border-box;
       transition: transform 0.1s linear;
     }
 
@@ -81,7 +85,7 @@
     road.position.y = -0.5;
     scene.add(road);
 
-    // CAR (Lamborghini block)
+    // CAR
     let car = new THREE.Mesh(
       new THREE.BoxGeometry(6, 2, 10),
       new THREE.MeshPhongMaterial({ color: 0xffff00 })
@@ -130,7 +134,7 @@
     }
     animate();
 
-    // Controls
+    // CONTROLS
     let accelerating = false, braking = false;
 
     setInterval(() => {
@@ -143,7 +147,7 @@
     document.getElementById('brake').addEventListener('mousedown', () => braking = true);
     document.getElementById('brake').addEventListener('mouseup', () => braking = false);
 
-    // Steering Wheel (Realistic Full Circle Rotation)
+    // STEERING ROTATION WITH COLOR CUE
     const steering = document.getElementById('steering');
     let dragging = false;
     let rotation = 0;
@@ -175,7 +179,7 @@
       steering.style.transform = `translateX(-50%) rotate(0deg)`;
     });
 
-    // PC Keyboard Steering
+    // PC STEERING SUPPORT
     window.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') steerAngle = 0.05;
       if (e.key === 'ArrowRight') steerAngle = -0.05;

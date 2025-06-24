@@ -1,12 +1,12 @@
-<!-- Full code with car auto-centering when steering resets -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Car with Centering Steering</title>
+  <title>Car Game</title>
   <style>
     body { margin: 0; overflow: hidden; background: black; }
     canvas { display: block; }
+
     #controls {
       position: absolute;
       bottom: 20px;
@@ -17,6 +17,7 @@
       padding: 0 20px;
       z-index: 10;
     }
+
     #steering {
       width: 240px;
       height: 240px;
@@ -27,11 +28,13 @@
       box-sizing: border-box;
       transition: transform 0.05s linear;
     }
+
     .pedals {
       display: flex;
       flex-direction: column;
       gap: 20px;
     }
+
     button {
       width: 120px;
       height: 80px;
@@ -41,49 +44,47 @@
       cursor: pointer;
       color: white;
     }
+
     #accelerate { background: green; }
     #brake { background: red; }
+
     #gameOverScreen {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(6px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-}
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(6px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
 
-#gameOverCard {
-  background: white;
-  padding: 40px;
-  border-radius: 20px;
-  box-shadow: 0 0 40px gold;
-  text-align: center;
-  font-family: 'Arial', sans-serif;
-  color: black;
-}
+    #gameOverCard {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 0 40px gold;
+      text-align: center;
+      font-family: 'Arial', sans-serif;
+      color: black;
+    }
 
-#gameOverCard h1 {
-  font-size: 36px;
-  color: red;
-}
+    #gameOverCard h1 {
+      font-size: 36px;
+      color: red;
+    }
 
-#gameOverCard button {
-  padding: 15px 30px;
-  background: linear-gradient(to right, gold, green);
-  border: none;
-  font-size: 20px;
-  color: white;
-  border-radius: 10px;
-  cursor: pointer;
-  margin-top: 20px;
-}
-
-#gameOverCard button:hover {
-  opacity: 0.9;
-}
+    #gameOverCard button {
+      padding: 15px 30px;
+      background: linear-gradient(to right, gold, green);
+      border: none;
+      font-size: 20px;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -94,33 +95,38 @@
     </div>
     <div id="steering"></div>
   </div>
-  <div id="gameOverScreen" style="display: none;">
-  <div id="gameOverCard">
-    <h1>💥 Game Over!</h1>
-    <p>You hit a building</p>
-    <button onclick="restartGame()">Restart</button>
+
+  <div id="gameOverScreen">
+    <div id="gameOverCard">
+      <h1>💥 Game Over!</h1>
+      <p>You hit a building</p>
+      <button onclick="restartGame()">Restart</button>
+    </div>
   </div>
-</div>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
   <script>
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+    const camera = new THREE.PerspectiveCamera(
+      75, window.innerWidth / window.innerHeight, 0.1, 2000
+    );
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
     // Lights
-    scene.add(new THREE.DirectionalLight(0xffffff, 1).position.set(100, 200, 100));
+    const sun = new THREE.DirectionalLight(0xffffff, 1);
+    sun.position.set(100, 200, 100);
+    scene.add(sun);
     scene.add(new THREE.AmbientLight(0x404040, 2));
 
-    // Road
+    // Ground
     const roadSegments = [];
     const segmentLength = 500;
     for (let i = 0; i < 5; i++) {
       const road = new THREE.Mesh(
         new THREE.BoxGeometry(100, 1, segmentLength),
-        new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 1 })
+        new THREE.MeshStandardMaterial({ color: 0x222222 })
       );
       road.position.set(0, -0.5, -i * segmentLength);
       scene.add(road);
@@ -130,23 +136,19 @@
     // Car
     const car = new THREE.Mesh(
       new THREE.BoxGeometry(6, 2, 10),
-      new THREE.MeshStandardMaterial({ color: 0xffff00, metalness: 0.3, roughness: 0.3 })
+      new THREE.MeshStandardMaterial({ color: 0xffff00 })
     );
     car.position.set(0, 1, 0);
     scene.add(car);
 
     // Buildings
-    const colors = [0x66aaff, 0x66ff66, 0xaa7744, 0xaa66cc];
     const buildings = [];
+    const colors = [0x66aaff, 0x66ff66, 0xaa7744, 0xaa66cc];
     for (let i = 0; i < 100; i++) {
-      const height = Math.random() * 100 + 200;
+      const height = 200 + Math.random() * 200;
       const building = new THREE.Mesh(
         new THREE.BoxGeometry(20, height, 20),
-        new THREE.MeshStandardMaterial({
-          color: colors[Math.floor(Math.random() * colors.length)],
-          metalness: 0.8,
-          roughness: 0.1
-        })
+        new THREE.MeshStandardMaterial({ color: colors[i % colors.length] })
       );
       building.position.set(
         (Math.random() > 0.5 ? 60 : -60) + Math.random() * 20,
@@ -161,34 +163,53 @@
     camera.position.set(0, 50, 60);
     camera.lookAt(car.position);
 
-    // Movement variables
+    // Movement
     let speed = 0, angle = 0, steerAngle = 0;
     const maxSpeed = 6;
+    let isGameOver = false;
+
+    function checkCollision() {
+      const carBox = new THREE.Box3().setFromCenterAndSize(
+        car.position.clone(), new THREE.Vector3(10, 4, 12)
+      );
+      for (let b of buildings) {
+        const bBox = new THREE.Box3().setFromObject(b);
+        if (carBox.intersectsBox(bBox)) return true;
+      }
+      return false;
+    }
+
+    function gameOver() {
+      isGameOver = true;
+      speed = 0;
+      document.getElementById('gameOverScreen').style.display = 'flex';
+    }
+
+    function restartGame() {
+      window.location.reload();
+    }
 
     function animate() {
       requestAnimationFrame(animate);
 
-      // Steering logic
+      if (!isGameOver && checkCollision()) gameOver();
+
       angle += steerAngle * (speed / 5);
 
-      // Auto-center: gradually reduce turning angle if steering is near center
       if (Math.abs(steerAngle) < 0.002 && Math.abs(angle) > 0.001) {
-        angle *= 0.95; // gradually return forward
+        angle *= 0.95;
       }
 
-      // Move car
       car.rotation.y = angle;
       car.position.x -= Math.sin(angle) * speed;
       car.position.z -= Math.cos(angle) * speed;
 
-      // Loop roads
       for (let seg of roadSegments) {
         if (car.position.z - seg.position.z < -segmentLength) {
           seg.position.z -= segmentLength * roadSegments.length;
         }
       }
 
-      // Loop buildings
       for (let b of buildings) {
         if (car.position.z - b.position.z < -500) {
           b.position.z = car.position.z - Math.random() * 2000 - 1000;
@@ -196,42 +217,15 @@
         }
       }
 
-      // Camera follow
       camera.position.x = car.position.x;
       camera.position.z = car.position.z + 60;
       camera.lookAt(car.position);
 
-      if (!isGameOver && checkCollision()) {
-  gameOver();
-}
-
       renderer.render(scene, camera);
     }
     animate();
-    let isGameOver = false;
 
-function checkCollision() {
-  const carBox = new THREE.Box3().setFromObject(car);
-  for (let b of buildings) {
-    const bBox = new THREE.Box3().setFromObject(b);
-    if (carBox.intersectsBox(bBox)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function gameOver() {
-  isGameOver = true;
-  speed = 0;
-  document.getElementById('gameOverScreen').style.display = 'flex';
-}
-
-function restartGame() {
-  window.location.reload(); // Simply reload the game for now
-}
-
-    // Pedals
+    // Controls
     let accelerating = false, braking = false;
     setInterval(() => {
       if (accelerating) speed = Math.min(speed + 0.1, maxSpeed);
@@ -242,16 +236,20 @@ function restartGame() {
       }
     }, 50);
 
-    document.getElementById('accelerate').addEventListener('touchstart', () => accelerating = true);
-    document.getElementById('accelerate').addEventListener('touchend', () => accelerating = false);
-    document.getElementById('accelerate').addEventListener('mousedown', () => accelerating = true);
-    document.getElementById('accelerate').addEventListener('mouseup', () => accelerating = false);
-    document.getElementById('brake').addEventListener('touchstart', () => braking = true);
-    document.getElementById('brake').addEventListener('touchend', () => braking = false);
-    document.getElementById('brake').addEventListener('mousedown', () => braking = true);
-    document.getElementById('brake').addEventListener('mouseup', () => braking = false);
+    const accel = document.getElementById('accelerate');
+    const brake = document.getElementById('brake');
 
-    // Steering input
+    accel.addEventListener('touchstart', () => accelerating = true);
+    accel.addEventListener('touchend', () => accelerating = false);
+    accel.addEventListener('mousedown', () => accelerating = true);
+    accel.addEventListener('mouseup', () => accelerating = false);
+
+    brake.addEventListener('touchstart', () => braking = true);
+    brake.addEventListener('touchend', () => braking = false);
+    brake.addEventListener('mousedown', () => braking = true);
+    brake.addEventListener('mouseup', () => braking = false);
+
+    // Steering wheel logic
     const steering = document.getElementById('steering');
     let dragging = false, currentRotation = 0, lastAngle = 0;
 
@@ -298,7 +296,6 @@ function restartGame() {
     window.addEventListener('mousemove', handleSteeringMove);
     window.addEventListener('mouseup', handleSteeringEnd);
 
-    // Steering auto reset
     setInterval(() => {
       if (!dragging && currentRotation !== 0) {
         currentRotation *= 0.9;
@@ -307,20 +304,6 @@ function restartGame() {
         steerAngle = -currentRotation * 0.0015;
       }
     }, 16);
-
-    // Keyboard fallback
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowLeft') steerAngle = 0.05;
-      if (e.key === 'ArrowRight') steerAngle = -0.05;
-      if (e.key === 'ArrowUp') accelerating = true;
-      if (e.key === 'ArrowDown') braking = true;
-    });
-
-    window.addEventListener('keyup', (e) => {
-      if (['ArrowLeft', 'ArrowRight'].includes(e.key)) steerAngle = 0;
-      if (e.key === 'ArrowUp') accelerating = false;
-      if (e.key === 'ArrowDown') braking = false;
-    });
   </script>
 </body>
 </html>

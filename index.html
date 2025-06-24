@@ -218,7 +218,14 @@ function animate() {
   car.position.x -= Math.sin(angle) * speed;
   car.position.z -= Math.cos(angle) * speed;
 
-  camera.position.set(car.position.x, car.position.y + 30, car.position.z + 60);
+  // 🚀 Smart camera follows car direction
+  const cameraDistance = 60;
+  const cameraHeight = 30;
+  const camX = car.position.x + Math.sin(angle) * cameraDistance;
+  const camZ = car.position.z + Math.cos(angle) * cameraDistance;
+  const camY = car.position.y + cameraHeight;
+
+  camera.position.set(camX, camY, camZ);
   camera.lookAt(car.position);
 
   renderer.render(scene, camera);

@@ -2,13 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Endless Lamborghini City Drive</title>
+  <title>Reflective City Drive</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
       background: black;
-      font-family: Arial, sans-serif;
     }
 
     canvas {
@@ -31,7 +30,6 @@
       height: 240px;
       border-radius: 50%;
       touch-action: none;
-      position: relative;
       background: conic-gradient(gold 0deg 180deg, green 180deg 360deg);
       border: 8px solid transparent;
       box-sizing: border-box;
@@ -69,47 +67,58 @@
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
   <script>
-    // THREE.js Setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(50, 200, 100);
-    scene.add(light);
-    scene.add(new THREE.AmbientLight(0x404040));
+    // Lighting
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(100, 200, 100);
+    scene.add(directionalLight);
+    scene.add(new THREE.AmbientLight(0x404040, 2));
 
     // Road segments
     const roadSegments = [];
     const segmentLength = 500;
     for (let i = 0; i < 5; i++) {
-      const segment = new THREE.Mesh(
+      const road = new THREE.Mesh(
         new THREE.BoxGeometry(100, 1, segmentLength),
-        new THREE.MeshPhongMaterial({ color: 0x222222 })
+        new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 1 })
       );
-      segment.position.set(0, -0.5, -i * segmentLength);
-      scene.add(segment);
-      roadSegments.push(segment);
+      road.position.set(0, -0.5, -i * segmentLength);
+      scene.add(road);
+      roadSegments.push(road);
     }
 
     // Car
     const car = new THREE.Mesh(
       new THREE.BoxGeometry(6, 2, 10),
-      new THREE.MeshPhongMaterial({ color: 0xffff00 })
+      new THREE.MeshStandardMaterial({ color: 0xffff00, metalness: 0.3, roughness: 0.3 })
     );
     car.position.set(0, 1, 0);
     scene.add(car);
 
-    // Buildings pool
+    // Reflective building material factory
+    const buildingColors = [0x66aaff, 0x66ff66, 0xaa7744, 0xaa66cc]; // blue, green, brown, purple
+    function createBuildingMaterial() {
+      return new THREE.MeshStandardMaterial({
+        color: buildingColors[Math.floor(Math.random() * buildingColors.length)],
+        metalness: 0.8,
+        roughness: 0.1
+      });
+    }
+
+    // Building pool
     const buildings = [];
     const buildingCount = 100;
     for (let i = 0; i < buildingCount; i++) {
       const height = Math.random() * 100 + 200;
+      const material = createBuildingMaterial();
       const building = new THREE.Mesh(
         new THREE.BoxGeometry(20, height, 20),
-        new THREE.MeshPhongMaterial({ color: 0x66aaff }) // bluish glass
+        material
       );
       building.position.set(
         (Math.random() > 0.5 ? 60 : -60) + Math.random() * 20,
@@ -123,7 +132,7 @@
     camera.position.set(0, 50, 60);
     camera.lookAt(car.position);
 
-    // Movement
+    // Movement logic
     let speed = 0;
     let angle = 0;
     let steerAngle = 0;
@@ -137,7 +146,7 @@
       car.position.x -= Math.sin(angle) * speed;
       car.position.z -= Math.cos(angle) * speed;
 
-      // Recycle road segments
+      // Recycle road
       for (let seg of roadSegments) {
         if (car.position.z - seg.position.z < -segmentLength) {
           seg.position.z -= segmentLength * roadSegments.length;
@@ -160,7 +169,7 @@
     }
     animate();
 
-    // Pedal Controls
+    // Controls
     let accelerating = false, braking = false;
 
     setInterval(() => {
@@ -189,7 +198,7 @@
     brk.addEventListener('mousedown', () => braking = true);
     brk.addEventListener('mouseup', () => braking = false);
 
-    // Steering wheel
+    // Steering
     const steering = document.getElementById('steering');
     let dragging = false;
     let currentRotation = 0;
@@ -238,7 +247,7 @@
     window.addEventListener('mousemove', handleSteeringMove);
     window.addEventListener('mouseup', handleSteeringEnd);
 
-    // Gradual reset of steering
+    // Reset steering gradually
     setInterval(() => {
       if (!dragging && currentRotation !== 0) {
         currentRotation *= 0.9;

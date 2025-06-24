@@ -116,6 +116,7 @@
     let speed = 0;
     let angle = 0;
     let steerAngle = 0;
+    const maxSpeed = 6;
 
     function animate() {
       requestAnimationFrame(animate);
@@ -137,16 +138,33 @@
     let accelerating = false, braking = false;
 
     setInterval(() => {
-      if (accelerating && speed < 2) speed += 0.05;
-      if (braking && speed > 0) speed -= 0.05;
-    }, 100);
+      if (accelerating) {
+        speed += 0.1;
+        if (speed > maxSpeed) speed = maxSpeed;
+      } else if (braking) {
+        speed -= 0.2;
+        if (speed < 0) speed = 0;
+      } else {
+        // Natural deceleration when not accelerating or braking
+        speed *= 0.98;
+        if (speed < 0.05) speed = 0;
+      }
+    }, 50);
 
-    document.getElementById('accelerate').addEventListener('mousedown', () => accelerating = true);
-    document.getElementById('accelerate').addEventListener('mouseup', () => accelerating = false);
-    document.getElementById('brake').addEventListener('mousedown', () => braking = true);
-    document.getElementById('brake').addEventListener('mouseup', () => braking = false);
+    const acc = document.getElementById('accelerate');
+    const brk = document.getElementById('brake');
 
-    // Realistic Steering
+    acc.addEventListener('touchstart', () => accelerating = true);
+    acc.addEventListener('touchend', () => accelerating = false);
+    acc.addEventListener('mousedown', () => accelerating = true);
+    acc.addEventListener('mouseup', () => accelerating = false);
+
+    brk.addEventListener('touchstart', () => braking = true);
+    brk.addEventListener('touchend', () => braking = false);
+    brk.addEventListener('mousedown', () => braking = true);
+    brk.addEventListener('mouseup', () => braking = false);
+
+    // Steering
     const steering = document.getElementById('steering');
     let dragging = false;
     let currentRotation = 0;
@@ -176,18 +194,18 @@
       if (delta < -Math.PI) delta += 2 * Math.PI;
 
       currentRotation += delta * 180 / Math.PI;
-      currentRotation = Math.max(-180, Math.min(180, currentRotation)); // clamp
+      currentRotation = Math.max(-180, Math.min(180, currentRotation));
       steering.style.transform = `rotate(${currentRotation}deg)`;
       lastAngle = angleNow;
 
       steerAngle = -currentRotation * 0.0015;
     });
 
-    steering.addEventListener('touchend', () => {
-      dragging = false;
-    });
+    steering.addEventListener('touchend', () => dragging = false);
+    steering.addEventListener('mouseup', () => dragging = false);
+    steering.addEventListener('mouseleave', () => dragging = false);
 
-    // Gradual steering reset
+    // Gradual reset of steering
     setInterval(() => {
       if (!dragging && currentRotation !== 0) {
         currentRotation *= 0.9;
@@ -195,9 +213,9 @@
         steering.style.transform = `rotate(${currentRotation}deg)`;
         steerAngle = -currentRotation * 0.0015;
       }
-    }, 16); // roughly 60 FPS
+    }, 16);
 
-    // PC Keyboard support
+    // PC keyboard fallback
     window.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') steerAngle = 0.05;
       if (e.key === 'ArrowRight') steerAngle = -0.05;

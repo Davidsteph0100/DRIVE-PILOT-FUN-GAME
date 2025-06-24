@@ -204,6 +204,28 @@
       renderer.render(scene, camera);
     }
     animate();
+    let isGameOver = false;
+
+function checkCollision() {
+  const carBox = new THREE.Box3().setFromObject(car);
+  for (let b of buildings) {
+    const bBox = new THREE.Box3().setFromObject(b);
+    if (carBox.intersectsBox(bBox)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function gameOver() {
+  isGameOver = true;
+  speed = 0;
+  document.getElementById('gameOverScreen').style.display = 'flex';
+}
+
+function restartGame() {
+  window.location.reload(); // Simply reload the game for now
+}
 
     // Pedals
     let accelerating = false, braking = false;

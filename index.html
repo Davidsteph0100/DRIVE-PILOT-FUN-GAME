@@ -1,19 +1,12 @@
+<!-- Full code with car auto-centering when steering resets -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Reflective City Drive</title>
+  <title>Car with Centering Steering</title>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: black;
-    }
-
-    canvas {
-      display: block;
-    }
-
+    body { margin: 0; overflow: hidden; background: black; }
+    canvas { display: block; }
     #controls {
       position: absolute;
       bottom: 20px;
@@ -24,7 +17,6 @@
       padding: 0 20px;
       z-index: 10;
     }
-
     #steering {
       width: 240px;
       height: 240px;
@@ -35,13 +27,11 @@
       box-sizing: border-box;
       transition: transform 0.05s linear;
     }
-
     .pedals {
       display: flex;
       flex-direction: column;
       gap: 20px;
     }
-
     button {
       width: 120px;
       height: 80px;
@@ -51,7 +41,6 @@
       cursor: pointer;
       color: white;
     }
-
     #accelerate { background: green; }
     #brake { background: red; }
   </style>
@@ -73,13 +62,11 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Lighting
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(100, 200, 100);
-    scene.add(directionalLight);
+    // Lights
+    scene.add(new THREE.DirectionalLight(0xffffff, 1).position.set(100, 200, 100));
     scene.add(new THREE.AmbientLight(0x404040, 2));
 
-    // Road segments
+    // Road
     const roadSegments = [];
     const segmentLength = 500;
     for (let i = 0; i < 5; i++) {
@@ -100,25 +87,18 @@
     car.position.set(0, 1, 0);
     scene.add(car);
 
-    // Reflective building material factory
-    const buildingColors = [0x66aaff, 0x66ff66, 0xaa7744, 0xaa66cc]; // blue, green, brown, purple
-    function createBuildingMaterial() {
-      return new THREE.MeshStandardMaterial({
-        color: buildingColors[Math.floor(Math.random() * buildingColors.length)],
-        metalness: 0.8,
-        roughness: 0.1
-      });
-    }
-
-    // Building pool
+    // Buildings
+    const colors = [0x66aaff, 0x66ff66, 0xaa7744, 0xaa66cc];
     const buildings = [];
-    const buildingCount = 100;
-    for (let i = 0; i < buildingCount; i++) {
+    for (let i = 0; i < 100; i++) {
       const height = Math.random() * 100 + 200;
-      const material = createBuildingMaterial();
       const building = new THREE.Mesh(
         new THREE.BoxGeometry(20, height, 20),
-        material
+        new THREE.MeshStandardMaterial({
+          color: colors[Math.floor(Math.random() * colors.length)],
+          metalness: 0.8,
+          roughness: 0.1
+        })
       );
       building.position.set(
         (Math.random() > 0.5 ? 60 : -60) + Math.random() * 20,
@@ -129,31 +109,38 @@
       buildings.push(building);
     }
 
+    // Camera
     camera.position.set(0, 50, 60);
     camera.lookAt(car.position);
 
-    // Movement logic
-    let speed = 0;
-    let angle = 0;
-    let steerAngle = 0;
+    // Movement variables
+    let speed = 0, angle = 0, steerAngle = 0;
     const maxSpeed = 6;
 
     function animate() {
       requestAnimationFrame(animate);
 
+      // Steering logic
       angle += steerAngle * (speed / 5);
+
+      // Auto-center: gradually reduce turning angle if steering is near center
+      if (Math.abs(steerAngle) < 0.002 && Math.abs(angle) > 0.001) {
+        angle *= 0.95; // gradually return forward
+      }
+
+      // Move car
       car.rotation.y = angle;
       car.position.x -= Math.sin(angle) * speed;
       car.position.z -= Math.cos(angle) * speed;
 
-      // Recycle road
+      // Loop roads
       for (let seg of roadSegments) {
         if (car.position.z - seg.position.z < -segmentLength) {
           seg.position.z -= segmentLength * roadSegments.length;
         }
       }
 
-      // Recycle buildings
+      // Loop buildings
       for (let b of buildings) {
         if (car.position.z - b.position.z < -500) {
           b.position.z = car.position.z - Math.random() * 2000 - 1000;
@@ -161,6 +148,7 @@
         }
       }
 
+      // Camera follow
       camera.position.x = car.position.x;
       camera.position.z = car.position.z + 60;
       camera.lookAt(car.position);
@@ -169,49 +157,42 @@
     }
     animate();
 
-    // Controls
+    // Pedals
     let accelerating = false, braking = false;
-
     setInterval(() => {
-      if (accelerating) {
-        speed += 0.1;
-        if (speed > maxSpeed) speed = maxSpeed;
-      } else if (braking) {
-        speed -= 0.2;
-        if (speed < 0) speed = 0;
-      } else {
+      if (accelerating) speed = Math.min(speed + 0.1, maxSpeed);
+      else if (braking) speed = Math.max(speed - 0.2, 0);
+      else {
         speed *= 0.98;
         if (speed < 0.05) speed = 0;
       }
     }, 50);
 
-    const acc = document.getElementById('accelerate');
-    const brk = document.getElementById('brake');
+    document.getElementById('accelerate').addEventListener('touchstart', () => accelerating = true);
+    document.getElementById('accelerate').addEventListener('touchend', () => accelerating = false);
+    document.getElementById('accelerate').addEventListener('mousedown', () => accelerating = true);
+    document.getElementById('accelerate').addEventListener('mouseup', () => accelerating = false);
+    document.getElementById('brake').addEventListener('touchstart', () => braking = true);
+    document.getElementById('brake').addEventListener('touchend', () => braking = false);
+    document.getElementById('brake').addEventListener('mousedown', () => braking = true);
+    document.getElementById('brake').addEventListener('mouseup', () => braking = false);
 
-    acc.addEventListener('touchstart', () => accelerating = true);
-    acc.addEventListener('touchend', () => accelerating = false);
-    acc.addEventListener('mousedown', () => accelerating = true);
-    acc.addEventListener('mouseup', () => accelerating = false);
-
-    brk.addEventListener('touchstart', () => braking = true);
-    brk.addEventListener('touchend', () => braking = false);
-    brk.addEventListener('mousedown', () => braking = true);
-    brk.addEventListener('mouseup', () => braking = false);
-
-    // Steering
+    // Steering input
     const steering = document.getElementById('steering');
-    let dragging = false;
-    let currentRotation = 0;
-    let lastAngle = 0;
+    let dragging = false, currentRotation = 0, lastAngle = 0;
+
+    function getAngle(e, cx, cy) {
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return Math.atan2(clientY - cy, clientX - cx);
+    }
 
     function handleSteeringStart(e) {
       dragging = true;
       const rect = steering.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      lastAngle = Math.atan2(clientY - cy, clientX - cx);
+      lastAngle = getAngle(e, cx, cy);
     }
 
     function handleSteeringMove(e) {
@@ -219,9 +200,7 @@
       const rect = steering.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const angleNow = Math.atan2(clientY - cy, clientX - cx);
+      const angleNow = getAngle(e, cx, cy);
 
       let delta = angleNow - lastAngle;
       if (delta > Math.PI) delta -= 2 * Math.PI;
@@ -231,7 +210,6 @@
       currentRotation = Math.max(-180, Math.min(180, currentRotation));
       steering.style.transform = `rotate(${currentRotation}deg)`;
       lastAngle = angleNow;
-
       steerAngle = -currentRotation * 0.0015;
     }
 
@@ -242,12 +220,11 @@
     steering.addEventListener('touchstart', handleSteeringStart);
     steering.addEventListener('touchmove', handleSteeringMove);
     steering.addEventListener('touchend', handleSteeringEnd);
-
     steering.addEventListener('mousedown', handleSteeringStart);
     window.addEventListener('mousemove', handleSteeringMove);
     window.addEventListener('mouseup', handleSteeringEnd);
 
-    // Reset steering gradually
+    // Steering auto reset
     setInterval(() => {
       if (!dragging && currentRotation !== 0) {
         currentRotation *= 0.9;
@@ -257,7 +234,7 @@
       }
     }, 16);
 
-    // Keyboard controls
+    // Keyboard fallback
     window.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') steerAngle = 0.05;
       if (e.key === 'ArrowRight') steerAngle = -0.05;

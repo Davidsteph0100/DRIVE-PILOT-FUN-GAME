@@ -35,6 +35,8 @@
       border-radius: 50%;
       touch-action: none;
       position: relative;
+      transform: translateX(-50%);
+      transition: transform 0.1s linear;
     }
 
     #steeringKnob {
@@ -99,7 +101,7 @@
 
     // BUILDINGS
     for (let i = 0; i < 50; i++) {
-      let bHeight = Math.random() * 100 + 200; // 30-storey approx
+      let bHeight = Math.random() * 100 + 200;
       let building = new THREE.Mesh(
         new THREE.BoxGeometry(20, bHeight, 20),
         new THREE.MeshPhongMaterial({ color: 0x999999 })
@@ -124,14 +126,12 @@
     function animate() {
       requestAnimationFrame(animate);
 
-      // Movement logic
       angle += steerAngle * (speed / 5);
       car.rotation.y = angle;
 
       car.position.x -= Math.sin(angle) * speed;
       car.position.z -= Math.cos(angle) * speed;
 
-      // Camera follow
       camera.position.x = car.position.x;
       camera.position.z = car.position.z + 60;
       camera.lookAt(car.position);
@@ -153,11 +153,12 @@
     document.getElementById('brake').addEventListener('mousedown', () => braking = true);
     document.getElementById('brake').addEventListener('mouseup', () => braking = false);
 
-    // Steering Wheel (drag logic)
+    // Steering Wheel (realistic rotation)
     const steering = document.getElementById('steering');
     const knob = document.getElementById('steeringKnob');
 
     let dragging = false;
+    let rotation = 0;
 
     steering.addEventListener('touchstart', e => {
       dragging = true;
@@ -175,6 +176,9 @@
       let theta = Math.atan2(dy, dx);
 
       steerAngle = -theta * 0.03;
+      rotation = theta * 180 / Math.PI;
+      steering.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+
       knob.style.left = `${60 + dx * 0.3 - 15}px`;
       knob.style.top = `${60 + dy * 0.3 - 15}px`;
     });
@@ -182,11 +186,12 @@
     steering.addEventListener('touchend', () => {
       dragging = false;
       steerAngle = 0;
+      steering.style.transform = `translateX(-50%) rotate(0deg)`;
       knob.style.left = '45px';
       knob.style.top = '45px';
     });
 
-    // PC Steering
+    // PC Keyboard Steering
     window.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') steerAngle = 0.05;
       if (e.key === 'ArrowRight') steerAngle = -0.05;

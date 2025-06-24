@@ -104,206 +104,200 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-  <script>
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(
-      75, window.innerWidth / window.innerHeight, 0.1, 2000
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script>
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb); // Sky blue
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// Lighting
+const sun = new THREE.DirectionalLight(0xffffff, 1);
+sun.position.set(100, 200, 100);
+scene.add(sun);
+scene.add(new THREE.AmbientLight(0x404040, 2));
+
+// Car
+const car = new THREE.Mesh(
+  new THREE.BoxGeometry(6, 2, 10),
+  new THREE.MeshStandardMaterial({ color: 0xffff00 })
+);
+car.position.set(0, 1, 0);
+scene.add(car);
+
+// Movement
+let speed = 0, angle = 0, steerAngle = 0, isGameOver = false;
+const maxSpeed = 6;
+
+// Junction & Road System
+const tileSize = 500;
+const tiles = new Map();
+
+function key(x, z) {
+  return `${x},${z}`;
+}
+
+function createTile(x, z) {
+  if (tiles.has(key(x, z))) return;
+
+  // Z-Road
+  const zRoad = new THREE.Mesh(
+    new THREE.BoxGeometry(100, 1, tileSize),
+    new THREE.MeshStandardMaterial({ color: 0x222222 })
+  );
+  zRoad.position.set(x, -0.5, z);
+  scene.add(zRoad);
+
+  // X-Road
+  const xRoad = new THREE.Mesh(
+    new THREE.BoxGeometry(tileSize, 1, 100),
+    new THREE.MeshStandardMaterial({ color: 0x222222 })
+  );
+  xRoad.position.set(x, -0.5, z);
+  scene.add(xRoad);
+
+  // Buildings
+  const colors = [0x66aaff, 0x66ff66, 0xaa7744, 0xaa66cc];
+  for (let i = 0; i < 4; i++) {
+    const bx = x + (i < 2 ? -80 : 80) + (Math.random() * 40 - 20);
+    const bz = z + (i % 2 === 0 ? -80 : 80) + (Math.random() * 40 - 20);
+    const h = 200 + Math.random() * 200;
+    const building = new THREE.Mesh(
+      new THREE.BoxGeometry(20, h, 20),
+      new THREE.MeshStandardMaterial({ color: colors[i % colors.length] })
     );
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+    building.position.set(bx, h / 2, bz);
+    scene.add(building);
+  }
 
-    // Lights
-    const sun = new THREE.DirectionalLight(0xffffff, 1);
-    sun.position.set(100, 200, 100);
-    scene.add(sun);
-    scene.add(new THREE.AmbientLight(0x404040, 2));
+  tiles.set(key(x, z), true);
+}
 
-    // Ground
-    const roadSegments = [];
-    const segmentLength = 500;
-    for (let i = 0; i < 5; i++) {
-      const road = new THREE.Mesh(
-        new THREE.BoxGeometry(100, 1, segmentLength),
-        new THREE.MeshStandardMaterial({ color: 0x222222 })
-      );
-      road.position.set(0, -0.5, -i * segmentLength);
-      scene.add(road);
-      roadSegments.push(road);
+function updateTiles() {
+  const cx = Math.round(car.position.x / tileSize) * tileSize;
+  const cz = Math.round(car.position.z / tileSize) * tileSize;
+
+  // 3x3 area around car
+  for (let dx of [-1, 0, 1]) {
+    for (let dz of [-1, 0, 1]) {
+      createTile(cx + dx * tileSize, cz + dz * tileSize);
     }
+  }
+}
 
-    // Car
-    const car = new THREE.Mesh(
-      new THREE.BoxGeometry(6, 2, 10),
-      new THREE.MeshStandardMaterial({ color: 0xffff00 })
-    );
-    car.position.set(0, 1, 0);
-    scene.add(car);
+// Collision Detection (placeholder — for buildings later)
+function checkCollision() {
+  return false; // update if buildings become more interactive
+}
 
-    // Buildings
-    const buildings = [];
-    const colors = [0x66aaff, 0x66ff66, 0xaa7744, 0xaa66cc];
-    for (let i = 0; i < 100; i++) {
-      const height = 200 + Math.random() * 200;
-      const building = new THREE.Mesh(
-        new THREE.BoxGeometry(20, height, 20),
-        new THREE.MeshStandardMaterial({ color: colors[i % colors.length] })
-      );
-      building.position.set(
-        (Math.random() > 0.5 ? 60 : -60) + Math.random() * 20,
-        height / 2,
-        -Math.random() * 2000
-      );
-      scene.add(building);
-      buildings.push(building);
-    }
+function gameOver() {
+  isGameOver = true;
+  speed = 0;
+  document.getElementById('gameOverScreen').style.display = 'flex';
+}
 
-    // Camera
-    camera.position.set(0, 50, 60);
-    camera.lookAt(car.position);
+function restartGame() {
+  window.location.reload();
+}
 
-    // Movement
-    let speed = 0, angle = 0, steerAngle = 0;
-    const maxSpeed = 6;
-    let isGameOver = false;
+function animate() {
+  requestAnimationFrame(animate);
 
-    function checkCollision() {
-      const carBox = new THREE.Box3().setFromCenterAndSize(
-        car.position.clone(), new THREE.Vector3(10, 4, 12)
-      );
-      for (let b of buildings) {
-        const bBox = new THREE.Box3().setFromObject(b);
-        if (carBox.intersectsBox(bBox)) return true;
-      }
-      return false;
-    }
+  updateTiles();
+  if (!isGameOver && checkCollision()) gameOver();
 
-    function gameOver() {
-      isGameOver = true;
-      speed = 0;
-      document.getElementById('gameOverScreen').style.display = 'flex';
-    }
+  angle += steerAngle * (speed / 5);
+  if (Math.abs(steerAngle) < 0.002 && Math.abs(angle) > 0.001) {
+    angle *= 0.95;
+  }
 
-    function restartGame() {
-      window.location.reload();
-    }
+  car.rotation.y = angle;
+  car.position.x -= Math.sin(angle) * speed;
+  car.position.z -= Math.cos(angle) * speed;
 
-    function animate() {
-      requestAnimationFrame(animate);
+  camera.position.set(car.position.x, car.position.y + 30, car.position.z + 60);
+  camera.lookAt(car.position);
 
-      if (!isGameOver && checkCollision()) gameOver();
+  renderer.render(scene, camera);
+}
+animate();
 
-      angle += steerAngle * (speed / 5);
+// Controls (same)
+let accelerating = false, braking = false;
+setInterval(() => {
+  if (accelerating) speed = Math.min(speed + 0.1, maxSpeed);
+  else if (braking) speed = Math.max(speed - 0.2, 0);
+  else {
+    speed *= 0.98;
+    if (speed < 0.05) speed = 0;
+  }
+}, 50);
 
-      if (Math.abs(steerAngle) < 0.002 && Math.abs(angle) > 0.001) {
-        angle *= 0.95;
-      }
+document.getElementById('accelerate').addEventListener('touchstart', () => accelerating = true);
+document.getElementById('accelerate').addEventListener('touchend', () => accelerating = false);
+document.getElementById('accelerate').addEventListener('mousedown', () => accelerating = true);
+document.getElementById('accelerate').addEventListener('mouseup', () => accelerating = false);
 
-      car.rotation.y = angle;
-      car.position.x -= Math.sin(angle) * speed;
-      car.position.z -= Math.cos(angle) * speed;
+document.getElementById('brake').addEventListener('touchstart', () => braking = true);
+document.getElementById('brake').addEventListener('touchend', () => braking = false);
+document.getElementById('brake').addEventListener('mousedown', () => braking = true);
+document.getElementById('brake').addEventListener('mouseup', () => braking = false);
 
-      for (let seg of roadSegments) {
-        if (car.position.z - seg.position.z < -segmentLength) {
-          seg.position.z -= segmentLength * roadSegments.length;
-        }
-      }
+// Steering
+const steering = document.getElementById('steering');
+let dragging = false, currentRotation = 0, lastAngle = 0;
 
-      for (let b of buildings) {
-        if (car.position.z - b.position.z < -500) {
-          b.position.z = car.position.z - Math.random() * 2000 - 1000;
-          b.position.x = (Math.random() > 0.5 ? 60 : -60) + Math.random() * 20;
-        }
-      }
+function getAngle(e, cx, cy) {
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return Math.atan2(clientY - cy, clientX - cx);
+}
 
-      camera.position.x = car.position.x;
-      camera.position.z = car.position.z + 60;
-      camera.lookAt(car.position);
+function handleSteeringStart(e) {
+  dragging = true;
+  const rect = steering.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  lastAngle = getAngle(e, cx, cy);
+}
 
-      renderer.render(scene, camera);
-    }
-    animate();
+function handleSteeringMove(e) {
+  if (!dragging) return;
+  const rect = steering.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const angleNow = getAngle(e, cx, cy);
+  let delta = angleNow - lastAngle;
+  if (delta > Math.PI) delta -= 2 * Math.PI;
+  if (delta < -Math.PI) delta += 2 * Math.PI;
+  currentRotation += delta * 180 / Math.PI;
+  currentRotation = Math.max(-180, Math.min(180, currentRotation));
+  steering.style.transform = `rotate(${currentRotation}deg)`;
+  lastAngle = angleNow;
+  steerAngle = -currentRotation * 0.0015;
+}
 
-    // Controls
-    let accelerating = false, braking = false;
-    setInterval(() => {
-      if (accelerating) speed = Math.min(speed + 0.1, maxSpeed);
-      else if (braking) speed = Math.max(speed - 0.2, 0);
-      else {
-        speed *= 0.98;
-        if (speed < 0.05) speed = 0;
-      }
-    }, 50);
+function handleSteeringEnd() {
+  dragging = false;
+}
+steering.addEventListener('touchstart', handleSteeringStart);
+steering.addEventListener('touchmove', handleSteeringMove);
+steering.addEventListener('touchend', handleSteeringEnd);
+steering.addEventListener('mousedown', handleSteeringStart);
+window.addEventListener('mousemove', handleSteeringMove);
+window.addEventListener('mouseup', handleSteeringEnd);
 
-    const accel = document.getElementById('accelerate');
-    const brake = document.getElementById('brake');
-
-    accel.addEventListener('touchstart', () => accelerating = true);
-    accel.addEventListener('touchend', () => accelerating = false);
-    accel.addEventListener('mousedown', () => accelerating = true);
-    accel.addEventListener('mouseup', () => accelerating = false);
-
-    brake.addEventListener('touchstart', () => braking = true);
-    brake.addEventListener('touchend', () => braking = false);
-    brake.addEventListener('mousedown', () => braking = true);
-    brake.addEventListener('mouseup', () => braking = false);
-
-    // Steering wheel logic
-    const steering = document.getElementById('steering');
-    let dragging = false, currentRotation = 0, lastAngle = 0;
-
-    function getAngle(e, cx, cy) {
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      return Math.atan2(clientY - cy, clientX - cx);
-    }
-
-    function handleSteeringStart(e) {
-      dragging = true;
-      const rect = steering.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      lastAngle = getAngle(e, cx, cy);
-    }
-
-    function handleSteeringMove(e) {
-      if (!dragging) return;
-      const rect = steering.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const angleNow = getAngle(e, cx, cy);
-
-      let delta = angleNow - lastAngle;
-      if (delta > Math.PI) delta -= 2 * Math.PI;
-      if (delta < -Math.PI) delta += 2 * Math.PI;
-
-      currentRotation += delta * 180 / Math.PI;
-      currentRotation = Math.max(-180, Math.min(180, currentRotation));
-      steering.style.transform = `rotate(${currentRotation}deg)`;
-      lastAngle = angleNow;
-      steerAngle = -currentRotation * 0.0015;
-    }
-
-    function handleSteeringEnd() {
-      dragging = false;
-    }
-
-    steering.addEventListener('touchstart', handleSteeringStart);
-    steering.addEventListener('touchmove', handleSteeringMove);
-    steering.addEventListener('touchend', handleSteeringEnd);
-    steering.addEventListener('mousedown', handleSteeringStart);
-    window.addEventListener('mousemove', handleSteeringMove);
-    window.addEventListener('mouseup', handleSteeringEnd);
-
-    setInterval(() => {
-      if (!dragging && currentRotation !== 0) {
-        currentRotation *= 0.9;
-        if (Math.abs(currentRotation) < 0.5) currentRotation = 0;
-        steering.style.transform = `rotate(${currentRotation}deg)`;
-        steerAngle = -currentRotation * 0.0015;
-      }
-    }, 16);
-  </script>
+setInterval(() => {
+  if (!dragging && currentRotation !== 0) {
+    currentRotation *= 0.9;
+    if (Math.abs(currentRotation) < 0.5) currentRotation = 0;
+    steering.style.transform = `rotate(${currentRotation}deg)`;
+    steerAngle = -currentRotation * 0.0015;
+  }
+}, 16);
+</script>
 </body>
 </html>

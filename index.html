@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>3D Lamborghini City Drive</title>
+  <meta charset="UTF-8" />
+  <title>Endless Lamborghini City Drive</title>
   <style>
     body {
       margin: 0;
@@ -81,13 +81,20 @@
     scene.add(light);
     scene.add(new THREE.AmbientLight(0x404040));
 
-    const road = new THREE.Mesh(
-      new THREE.BoxGeometry(100, 1, 2000),
-      new THREE.MeshPhongMaterial({ color: 0x222222 })
-    );
-    road.position.y = -0.5;
-    scene.add(road);
+    // Road segments
+    const roadSegments = [];
+    const segmentLength = 500;
+    for (let i = 0; i < 5; i++) {
+      const segment = new THREE.Mesh(
+        new THREE.BoxGeometry(100, 1, segmentLength),
+        new THREE.MeshPhongMaterial({ color: 0x222222 })
+      );
+      segment.position.set(0, -0.5, -i * segmentLength);
+      scene.add(segment);
+      roadSegments.push(segment);
+    }
 
+    // Car
     const car = new THREE.Mesh(
       new THREE.BoxGeometry(6, 2, 10),
       new THREE.MeshPhongMaterial({ color: 0xffff00 })
@@ -95,24 +102,28 @@
     car.position.set(0, 1, 0);
     scene.add(car);
 
-    for (let i = 0; i < 50; i++) {
+    // Buildings pool
+    const buildings = [];
+    const buildingCount = 100;
+    for (let i = 0; i < buildingCount; i++) {
       const height = Math.random() * 100 + 200;
       const building = new THREE.Mesh(
         new THREE.BoxGeometry(20, height, 20),
-        new THREE.MeshPhongMaterial({ color: 0x999999 })
+        new THREE.MeshPhongMaterial({ color: 0x66aaff }) // bluish glass
       );
       building.position.set(
         (Math.random() > 0.5 ? 60 : -60) + Math.random() * 20,
         height / 2,
-        -1000 + Math.random() * 2000
+        -Math.random() * 2000
       );
       scene.add(building);
+      buildings.push(building);
     }
 
     camera.position.set(0, 50, 60);
     camera.lookAt(car.position);
 
-    // Car movement
+    // Movement
     let speed = 0;
     let angle = 0;
     let steerAngle = 0;
@@ -125,6 +136,21 @@
       car.rotation.y = angle;
       car.position.x -= Math.sin(angle) * speed;
       car.position.z -= Math.cos(angle) * speed;
+
+      // Recycle road segments
+      for (let seg of roadSegments) {
+        if (car.position.z - seg.position.z < -segmentLength) {
+          seg.position.z -= segmentLength * roadSegments.length;
+        }
+      }
+
+      // Recycle buildings
+      for (let b of buildings) {
+        if (car.position.z - b.position.z < -500) {
+          b.position.z = car.position.z - Math.random() * 2000 - 1000;
+          b.position.x = (Math.random() > 0.5 ? 60 : -60) + Math.random() * 20;
+        }
+      }
 
       camera.position.x = car.position.x;
       camera.position.z = car.position.z + 60;
@@ -145,7 +171,6 @@
         speed -= 0.2;
         if (speed < 0) speed = 0;
       } else {
-        // Natural deceleration when not accelerating or braking
         speed *= 0.98;
         if (speed < 0.05) speed = 0;
       }
@@ -164,30 +189,30 @@
     brk.addEventListener('mousedown', () => braking = true);
     brk.addEventListener('mouseup', () => braking = false);
 
-    // Steering
+    // Steering wheel
     const steering = document.getElementById('steering');
     let dragging = false;
     let currentRotation = 0;
     let lastAngle = 0;
 
-    steering.addEventListener('touchstart', e => {
+    function handleSteeringStart(e) {
       dragging = true;
       const rect = steering.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      const touch = e.touches[0];
-      lastAngle = Math.atan2(touch.clientY - cy, touch.clientX - cx);
-    });
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      lastAngle = Math.atan2(clientY - cy, clientX - cx);
+    }
 
-    steering.addEventListener('touchmove', e => {
+    function handleSteeringMove(e) {
       if (!dragging) return;
       const rect = steering.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      const touch = e.touches[0];
-      const dx = touch.clientX - cx;
-      const dy = touch.clientY - cy;
-      const angleNow = Math.atan2(dy, dx);
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const angleNow = Math.atan2(clientY - cy, clientX - cx);
 
       let delta = angleNow - lastAngle;
       if (delta > Math.PI) delta -= 2 * Math.PI;
@@ -199,11 +224,19 @@
       lastAngle = angleNow;
 
       steerAngle = -currentRotation * 0.0015;
-    });
+    }
 
-    steering.addEventListener('touchend', () => dragging = false);
-    steering.addEventListener('mouseup', () => dragging = false);
-    steering.addEventListener('mouseleave', () => dragging = false);
+    function handleSteeringEnd() {
+      dragging = false;
+    }
+
+    steering.addEventListener('touchstart', handleSteeringStart);
+    steering.addEventListener('touchmove', handleSteeringMove);
+    steering.addEventListener('touchend', handleSteeringEnd);
+
+    steering.addEventListener('mousedown', handleSteeringStart);
+    window.addEventListener('mousemove', handleSteeringMove);
+    window.addEventListener('mouseup', handleSteeringEnd);
 
     // Gradual reset of steering
     setInterval(() => {
@@ -215,7 +248,7 @@
       }
     }, 16);
 
-    // PC keyboard fallback
+    // Keyboard controls
     window.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') steerAngle = 0.05;
       if (e.key === 'ArrowRight') steerAngle = -0.05;

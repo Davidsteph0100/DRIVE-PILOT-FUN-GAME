@@ -33,14 +33,11 @@
       border-radius: 50%;
       touch-action: none;
       position: relative;
-      transform: translateX(-50%);
-      background: conic-gradient(
-        gold 0deg 180deg,
-        green 180deg 360deg
-      );
+      transform: translateX(-50%) rotate(0deg);
+      background: conic-gradient(gold 0deg 180deg, green 180deg 360deg);
       border: 8px solid transparent;
       box-sizing: border-box;
-      transition: transform 0.1s linear;
+      transition: transform 0.05s linear;
     }
 
     button {
@@ -65,76 +62,68 @@
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
   <script>
-    let scene = new THREE.Scene();
-    let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-    let renderer = new THREE.WebGLRenderer({ antialias: true });
+    // THREE.js Setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // LIGHT
-    let light = new THREE.DirectionalLight(0xffffff, 1);
+    const light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(50, 200, 100);
     scene.add(light);
     scene.add(new THREE.AmbientLight(0x404040));
 
-    // ROAD
-    let road = new THREE.Mesh(
+    const road = new THREE.Mesh(
       new THREE.BoxGeometry(100, 1, 2000),
       new THREE.MeshPhongMaterial({ color: 0x222222 })
     );
     road.position.y = -0.5;
     scene.add(road);
 
-    // CAR
-    let car = new THREE.Mesh(
+    const car = new THREE.Mesh(
       new THREE.BoxGeometry(6, 2, 10),
       new THREE.MeshPhongMaterial({ color: 0xffff00 })
     );
     car.position.set(0, 1, 0);
     scene.add(car);
 
-    // BUILDINGS
     for (let i = 0; i < 50; i++) {
-      let bHeight = Math.random() * 100 + 200;
-      let building = new THREE.Mesh(
-        new THREE.BoxGeometry(20, bHeight, 20),
+      const height = Math.random() * 100 + 200;
+      const building = new THREE.Mesh(
+        new THREE.BoxGeometry(20, height, 20),
         new THREE.MeshPhongMaterial({ color: 0x999999 })
       );
       building.position.set(
         (Math.random() > 0.5 ? 60 : -60) + Math.random() * 20,
-        bHeight / 2,
+        height / 2,
         -1000 + Math.random() * 2000
       );
       scene.add(building);
     }
 
-    // CAMERA FOLLOW
     camera.position.set(0, 50, 60);
     camera.lookAt(car.position);
 
-    // CAR CONTROL
+    // Car movement
     let speed = 0;
     let angle = 0;
     let steerAngle = 0;
 
     function animate() {
       requestAnimationFrame(animate);
-
       angle += steerAngle * (speed / 5);
       car.rotation.y = angle;
-
       car.position.x -= Math.sin(angle) * speed;
       car.position.z -= Math.cos(angle) * speed;
-
       camera.position.x = car.position.x;
       camera.position.z = car.position.z + 60;
       camera.lookAt(car.position);
-
       renderer.render(scene, camera);
     }
     animate();
 
-    // CONTROLS
+    // Button controls
     let accelerating = false, braking = false;
 
     setInterval(() => {
@@ -147,39 +136,51 @@
     document.getElementById('brake').addEventListener('mousedown', () => braking = true);
     document.getElementById('brake').addEventListener('mouseup', () => braking = false);
 
-    // STEERING ROTATION WITH COLOR CUE
+    // Realistic continuous steering
     const steering = document.getElementById('steering');
     let dragging = false;
-    let rotation = 0;
+    let currentRotation = 0;
+    let lastAngle = 0;
 
     steering.addEventListener('touchstart', e => {
       dragging = true;
+      const rect = steering.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const touch = e.touches[0];
+      lastAngle = Math.atan2(touch.clientY - cy, touch.clientX - cx);
     });
 
     steering.addEventListener('touchmove', e => {
       if (!dragging) return;
-      let rect = steering.getBoundingClientRect();
-      let centerX = rect.left + rect.width / 2;
-      let centerY = rect.top + rect.height / 2;
+      const rect = steering.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const touch = e.touches[0];
+      const dx = touch.clientX - cx;
+      const dy = touch.clientY - cy;
+      const angleNow = Math.atan2(dy, dx);
 
-      let touch = e.touches[0];
-      let dx = touch.clientX - centerX;
-      let dy = touch.clientY - centerY;
-      let theta = Math.atan2(dy, dx);
+      let delta = angleNow - lastAngle;
+      if (delta > Math.PI) delta -= 2 * Math.PI;
+      if (delta < -Math.PI) delta += 2 * Math.PI;
 
-      rotation = theta * 180 / Math.PI;
-      steerAngle = -theta * 0.03;
+      currentRotation += delta * 180 / Math.PI;
+      currentRotation = Math.max(-180, Math.min(180, currentRotation)); // clamp
+      steering.style.transform = `translateX(-50%) rotate(${currentRotation}deg)`;
+      lastAngle = angleNow;
 
-      steering.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+      steerAngle = -currentRotation * 0.0015; // converts degrees to steering effect
     });
 
     steering.addEventListener('touchend', () => {
       dragging = false;
       steerAngle = 0;
+      currentRotation = 0;
       steering.style.transform = `translateX(-50%) rotate(0deg)`;
     });
 
-    // PC STEERING SUPPORT
+    // PC keyboard
     window.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') steerAngle = 0.05;
       if (e.key === 'ArrowRight') steerAngle = -0.05;
@@ -187,7 +188,7 @@
       if (e.key === 'ArrowDown') braking = true;
     });
     window.addEventListener('keyup', (e) => {
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') steerAngle = 0;
+      if (['ArrowLeft', 'ArrowRight'].includes(e.key)) steerAngle = 0;
       if (e.key === 'ArrowUp') accelerating = false;
       if (e.key === 'ArrowDown') braking = false;
     });

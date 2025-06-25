@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Car Game with GLB Car</title>
+  <title>Car Game with GLB Model</title>
   <style>
     body { margin: 0; overflow: hidden; background: black; }
     canvas { display: block; }
@@ -105,247 +105,241 @@
     </div>
   </div>
 
-  <!-- Libraries -->
+  <!-- Correct script order -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.min.js"></script>
 
-<script>
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
+  <script>
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.insertBefore(renderer.domElement, document.body.firstChild);
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.insertBefore(renderer.domElement, document.body.firstChild);
 
-let speed = 0, angle = 0, steerAngle = 0, isGameOver = false;
-let currentRotation = 0, lastAngle = 0;
-const maxSpeed = 6;
-const tileSize = 500;
-const tiles = new Map();
-const buildings = [];
+    let speed = 0, angle = 0, steerAngle = 0, isGameOver = false;
+    let currentRotation = 0, lastAngle = 0;
+    const maxSpeed = 6;
+    const tileSize = 500;
+    const tiles = new Map();
+    const buildings = [];
+    let car;
 
-let car; // Will be set when GLB loads
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+    const sun = new THREE.DirectionalLight(0xffffff, 1);
+    sun.position.set(100, 200, 100);
+    scene.add(sun);
+    scene.add(new THREE.AmbientLight(0x404040, 1.5));
 
-const sun = new THREE.DirectionalLight(0xffffff, 1);
-sun.position.set(100, 200, 100);
-scene.add(sun);
-scene.add(new THREE.AmbientLight(0x404040, 1.5));
-
-// Load GLB car
-const loader = new THREE.GLTFLoader();
-loader.load(
-  'https://raw.githubusercontent.com/Davidsteph0100/assets/main/brio_psx_style_han66st.glb',
-  function(gltf) {
-    car = gltf.scene;
-    car.position.set(0, 1, 10);
-    car.scale.set(2, 2, 2); // Adjust if needed
-    scene.add(car);
-  },
-  undefined,
-  function(error) {
-    console.error('GLB Load Error:', error);
-  }
-);
-
-function key(x, z) {
-  return `${x},${z}`;
-}
-
-function createTile(x, z) {
-  if (tiles.has(key(x, z))) return;
-
-  const zRoad = new THREE.Mesh(
-    new THREE.BoxGeometry(100, 1, tileSize),
-    new THREE.MeshStandardMaterial({ color: 0x222222 })
-  );
-  zRoad.position.set(x, -0.5, z);
-  scene.add(zRoad);
-
-  const xRoad = new THREE.Mesh(
-    new THREE.BoxGeometry(tileSize, 1, 100),
-    new THREE.MeshStandardMaterial({ color: 0x222222 })
-  );
-  xRoad.position.set(x, -0.5, z);
-  scene.add(xRoad);
-
-  const colors = [0x66aaff, 0x66ff66, 0xaa7744, 0xaa66cc];
-  for (let i = 0; i < 16; i++) {
-    const bx = x + (i % 4 < 2 ? -80 : 80) + (Math.random() * 80 - 40);
-    const bz = z + (i % 4 < 2 ? -80 : 80) + (Math.random() * 80 - 40);
-    const h = 200 + Math.random() * 200;
-    const building = new THREE.Mesh(
-      new THREE.BoxGeometry(20, h, 20),
-      new THREE.MeshStandardMaterial({ color: colors[i % colors.length] })
+    const loader = new THREE.GLTFLoader();
+    loader.load(
+      'https://raw.githubusercontent.com/Davidsteph0100/assets/main/brio_psx_style_han66st.glb',
+      function(gltf) {
+        car = gltf.scene;
+        car.position.set(0, 1, 10);
+        car.scale.set(2, 2, 2);
+        scene.add(car);
+      },
+      undefined,
+      function(error) {
+        console.error('GLB Load Error:', error);
+      }
     );
-    building.position.set(bx, h / 2, bz);
-    scene.add(building);
-    buildings.push(building);
-  }
 
-  tiles.set(key(x, z), true);
-}
-
-function updateTiles() {
-  if (!car) return;
-  const cx = Math.round(car.position.x / tileSize) * tileSize;
-  const cz = Math.round(car.position.z / tileSize) * tileSize;
-  for (let dx of [-1, 0, 1]) {
-    for (let dz of [-1, 0, 1]) {
-      createTile(cx + dx * tileSize, cz + dz * tileSize);
+    function key(x, z) {
+      return `${x},${z}`;
     }
-  }
-}
 
-function checkCollision() {
-  if (!car) return false;
-  const carBox = new THREE.Box3().setFromObject(car);
-  for (let b of buildings) {
-    const buildingBox = new THREE.Box3().setFromObject(b);
-    if (carBox.intersectsBox(buildingBox)) return true;
-  }
-  return false;
-}
+    function createTile(x, z) {
+      if (tiles.has(key(x, z))) return;
 
-function gameOver() {
-  isGameOver = true;
-  speed = 0;
-  document.getElementById('gameOverScreen').style.display = 'flex';
-}
+      const zRoad = new THREE.Mesh(
+        new THREE.BoxGeometry(100, 1, tileSize),
+        new THREE.MeshStandardMaterial({ color: 0x222222 })
+      );
+      zRoad.position.set(x, -0.5, z);
+      scene.add(zRoad);
 
-function restartGame() {
-  window.location.reload();
-}
+      const xRoad = new THREE.Mesh(
+        new THREE.BoxGeometry(tileSize, 1, 100),
+        new THREE.MeshStandardMaterial({ color: 0x222222 })
+      );
+      xRoad.position.set(x, -0.5, z);
+      scene.add(xRoad);
 
-function animate() {
-  requestAnimationFrame(animate);
+      const colors = [0x66aaff, 0x66ff66, 0xaa7744, 0xaa66cc];
+      for (let i = 0; i < 16; i++) {
+        const bx = x + (i % 4 < 2 ? -80 : 80) + (Math.random() * 80 - 40);
+        const bz = z + (i % 4 < 2 ? -80 : 80) + (Math.random() * 80 - 40);
+        const h = 200 + Math.random() * 200;
+        const building = new THREE.Mesh(
+          new THREE.BoxGeometry(20, h, 20),
+          new THREE.MeshStandardMaterial({ color: colors[i % colors.length] })
+        );
+        building.position.set(bx, h / 2, bz);
+        scene.add(building);
+        buildings.push(building);
+      }
 
-  if (!car || isGameOver) {
-    renderer.render(scene, camera);
-    return;
-  }
-
-  updateTiles();
-  if (checkCollision()) gameOver();
-
-  if (Math.abs(steerAngle) > 0.001) {
-    angle += steerAngle * (speed / 5);
-  }
-
-  car.rotation.y = angle;
-  car.position.x -= Math.sin(angle) * speed;
-  car.position.z -= Math.cos(angle) * speed;
-
-  const cameraDistance = 60;
-  const cameraHeight = 30;
-  const camX = car.position.x + Math.sin(angle) * cameraDistance;
-  const camZ = car.position.z + Math.cos(angle) * cameraDistance;
-  const camY = car.position.y + cameraHeight;
-  camera.position.set(camX, camY, camZ);
-  camera.lookAt(car.position);
-
-  renderer.render(scene, camera);
-}
-
-animate();
-
-// Speed logic
-let accelerating = false, braking = false;
-setInterval(() => {
-  if (accelerating) speed = Math.min(speed + 0.1, maxSpeed);
-  else if (braking) speed = Math.max(speed - 0.2, 0);
-  else {
-    speed *= 0.98;
-    if (speed < 0.05) speed = 0;
-  }
-}, 50);
-
-// Pedal controls
-document.getElementById('accelerate').addEventListener('touchstart', e => { e.preventDefault(); accelerating = true; }, { passive: false });
-document.getElementById('accelerate').addEventListener('touchend', e => { e.preventDefault(); accelerating = false; }, { passive: false });
-document.getElementById('brake').addEventListener('touchstart', e => { e.preventDefault(); braking = true; }, { passive: false });
-document.getElementById('brake').addEventListener('touchend', e => { e.preventDefault(); braking = false; }, { passive: false });
-
-document.getElementById('accelerate').addEventListener('mousedown', () => { accelerating = true; });
-document.getElementById('accelerate').addEventListener('mouseup', () => { accelerating = false; });
-document.getElementById('brake').addEventListener('mousedown', () => { braking = true; });
-document.getElementById('brake').addEventListener('mouseup', () => { braking = false; });
-
-// Steering
-const steering = document.getElementById('steering');
-let dragging = false;
-let steerTouchId = null;
-
-function getAngle(e, cx, cy) {
-  const touch = e.changedTouches ? [...e.changedTouches].find(t => t.identifier === steerTouchId) : e;
-  const x = touch.clientX, y = touch.clientY;
-  return Math.atan2(y - cy, x - cx);
-}
-
-function handleSteeringStart(e) {
-  const rect = steering.getBoundingClientRect();
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  if (e.touches) {
-    const touch = e.changedTouches[0];
-    steerTouchId = touch.identifier;
-    lastAngle = getAngle({ changedTouches: [touch] }, cx, cy);
-  } else {
-    lastAngle = getAngle(e, cx, cy);
-  }
-  dragging = true;
-}
-
-function handleSteeringMove(e) {
-  if (!dragging) return;
-  const rect = steering.getBoundingClientRect();
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  const angleNow = getAngle(e, cx, cy);
-  let delta = angleNow - lastAngle;
-  if (delta > Math.PI) delta -= 2 * Math.PI;
-  if (delta < -Math.PI) delta += 2 * Math.PI;
-  currentRotation += delta * 180 / Math.PI;
-  currentRotation = Math.max(-180, Math.min(180, currentRotation));
-  steering.style.transform = `rotate(${currentRotation}deg)`;
-  lastAngle = angleNow;
-  steerAngle = -currentRotation * 0.0015;
-}
-
-function handleSteeringEnd(e) {
-  if (e.changedTouches) {
-    const touch = [...e.changedTouches].find(t => t.identifier === steerTouchId);
-    if (touch) {
-      dragging = false;
-      steerTouchId = null;
+      tiles.set(key(x, z), true);
     }
-  } else {
-    dragging = false;
-  }
-}
 
-steering.addEventListener('touchstart', handleSteeringStart);
-steering.addEventListener('touchmove', handleSteeringMove);
-steering.addEventListener('touchend', handleSteeringEnd);
-steering.addEventListener('mousedown', handleSteeringStart);
-window.addEventListener('mousemove', handleSteeringMove);
-window.addEventListener('mouseup', handleSteeringEnd);
+    function updateTiles() {
+      if (!car) return;
+      const cx = Math.round(car.position.x / tileSize) * tileSize;
+      const cz = Math.round(car.position.z / tileSize) * tileSize;
+      for (let dx of [-1, 0, 1]) {
+        for (let dz of [-1, 0, 1]) {
+          createTile(cx + dx * tileSize, cz + dz * tileSize);
+        }
+      }
+    }
 
-// Steering Reset
-setInterval(() => {
-  if (!dragging && currentRotation !== 0) {
-    currentRotation *= 0.9;
-    if (Math.abs(currentRotation) < 0.5) currentRotation = 0;
-    steering.style.transform = `rotate(${currentRotation}deg)`;
-    steerAngle = -currentRotation * 0.0015;
-  }
-}, 16);
-</script>
+    function checkCollision() {
+      if (!car) return false;
+      const carBox = new THREE.Box3().setFromObject(car);
+      for (let b of buildings) {
+        const buildingBox = new THREE.Box3().setFromObject(b);
+        if (carBox.intersectsBox(buildingBox)) return true;
+      }
+      return false;
+    }
+
+    function gameOver() {
+      isGameOver = true;
+      speed = 0;
+      document.getElementById('gameOverScreen').style.display = 'flex';
+    }
+
+    function restartGame() {
+      window.location.reload();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (!car || isGameOver) {
+        renderer.render(scene, camera);
+        return;
+      }
+
+      updateTiles();
+      if (checkCollision()) gameOver();
+
+      if (Math.abs(steerAngle) > 0.001) {
+        angle += steerAngle * (speed / 5);
+      }
+
+      car.rotation.y = angle;
+      car.position.x -= Math.sin(angle) * speed;
+      car.position.z -= Math.cos(angle) * speed;
+
+      const cameraDistance = 60;
+      const cameraHeight = 30;
+      const camX = car.position.x + Math.sin(angle) * cameraDistance;
+      const camZ = car.position.z + Math.cos(angle) * cameraDistance;
+      const camY = car.position.y + cameraHeight;
+      camera.position.set(camX, camY, camZ);
+      camera.lookAt(car.position);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    let accelerating = false, braking = false;
+    setInterval(() => {
+      if (accelerating) speed = Math.min(speed + 0.1, maxSpeed);
+      else if (braking) speed = Math.max(speed - 0.2, 0);
+      else {
+        speed *= 0.98;
+        if (speed < 0.05) speed = 0;
+      }
+    }, 50);
+
+    document.getElementById('accelerate').addEventListener('touchstart', e => { e.preventDefault(); accelerating = true; }, { passive: false });
+    document.getElementById('accelerate').addEventListener('touchend', e => { e.preventDefault(); accelerating = false; }, { passive: false });
+    document.getElementById('brake').addEventListener('touchstart', e => { e.preventDefault(); braking = true; }, { passive: false });
+    document.getElementById('brake').addEventListener('touchend', e => { e.preventDefault(); braking = false; }, { passive: false });
+
+    document.getElementById('accelerate').addEventListener('mousedown', () => { accelerating = true; });
+    document.getElementById('accelerate').addEventListener('mouseup', () => { accelerating = false; });
+    document.getElementById('brake').addEventListener('mousedown', () => { braking = true; });
+    document.getElementById('brake').addEventListener('mouseup', () => { braking = false; });
+
+    const steering = document.getElementById('steering');
+    let dragging = false;
+    let steerTouchId = null;
+
+    function getAngle(e, cx, cy) {
+      const touch = e.changedTouches ? [...e.changedTouches].find(t => t.identifier === steerTouchId) : e;
+      const x = touch.clientX, y = touch.clientY;
+      return Math.atan2(y - cy, x - cx);
+    }
+
+    function handleSteeringStart(e) {
+      const rect = steering.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      if (e.touches) {
+        const touch = e.changedTouches[0];
+        steerTouchId = touch.identifier;
+        lastAngle = getAngle({ changedTouches: [touch] }, cx, cy);
+      } else {
+        lastAngle = getAngle(e, cx, cy);
+      }
+      dragging = true;
+    }
+
+    function handleSteeringMove(e) {
+      if (!dragging) return;
+      const rect = steering.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const angleNow = getAngle(e, cx, cy);
+      let delta = angleNow - lastAngle;
+      if (delta > Math.PI) delta -= 2 * Math.PI;
+      if (delta < -Math.PI) delta += 2 * Math.PI;
+      currentRotation += delta * 180 / Math.PI;
+      currentRotation = Math.max(-180, Math.min(180, currentRotation));
+      steering.style.transform = `rotate(${currentRotation}deg)`;
+      lastAngle = angleNow;
+      steerAngle = -currentRotation * 0.0015;
+    }
+
+    function handleSteeringEnd(e) {
+      if (e.changedTouches) {
+        const touch = [...e.changedTouches].find(t => t.identifier === steerTouchId);
+        if (touch) {
+          dragging = false;
+          steerTouchId = null;
+        }
+      } else {
+        dragging = false;
+      }
+    }
+
+    steering.addEventListener('touchstart', handleSteeringStart);
+    steering.addEventListener('touchmove', handleSteeringMove);
+    steering.addEventListener('touchend', handleSteeringEnd);
+    steering.addEventListener('mousedown', handleSteeringStart);
+    window.addEventListener('mousemove', handleSteeringMove);
+    window.addEventListener('mouseup', handleSteeringEnd);
+
+    setInterval(() => {
+      if (!dragging && currentRotation !== 0) {
+        currentRotation *= 0.9;
+        if (Math.abs(currentRotation) < 0.5) currentRotation = 0;
+        steering.style.transform = `rotate(${currentRotation}deg)`;
+        steerAngle = -currentRotation * 0.0015;
+      }
+    }, 16);
+  </script>
 </body>
 </html>

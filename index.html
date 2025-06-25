@@ -142,7 +142,7 @@
   'https://raw.githubusercontent.com/Davidsteph0100/assets/main/brio_psx_style_han66st.glb',
   function(gltf) {
     car = gltf.scene;
-    car.rotation.y = -Math.PI / 2; // or try Math.PI / 2 if needed
+    car.rotation.y = Math.PI / 2; // or try Math.PI / 2 if needed
     car.position.set(0, 1, 10);
     car.scale.set(2, 2, 2);
     scene.add(car);

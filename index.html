@@ -114,10 +114,9 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.insertBefore(renderer.domElement, document.body.firstChild);
 
-// ✅ FIXED: Declare these early
+// Variables
 let speed = 0, angle = 0, steerAngle = 0, isGameOver = false;
 let dragging = false, currentRotation = 0, lastAngle = 0;
-
 const maxSpeed = 6;
 const tileSize = 500;
 const tiles = new Map();
@@ -141,7 +140,7 @@ const car = new THREE.Mesh(
   new THREE.BoxGeometry(6, 2, 10),
   new THREE.MeshStandardMaterial({ color: 0xffff00 })
 );
-car.position.set(0, 1, 10); // Shift forward a bit to avoid any initial overlap
+car.position.set(0, 1, 10);
 scene.add(car);
 
 // Generate road tiles
@@ -218,25 +217,16 @@ function animate() {
   updateTiles();
   if (!isGameOver && checkCollision()) gameOver();
 
+  // Apply steering and movement
   if (Math.abs(steerAngle) > 0.001) {
     angle += steerAngle * (speed / 5);
-  } else {
-    angle *= 0.95;
   }
 
   car.rotation.y = angle;
   car.position.x -= Math.sin(angle) * speed;
   car.position.z -= Math.cos(angle) * speed;
 
-  // Recenter to nearest road centerline
-  if (!dragging) {
-    if (Math.abs(Math.sin(angle)) > Math.abs(Math.cos(angle))) {
-      car.position.z += (Math.round(car.position.z / 100) * 100 - car.position.z) * 0.05;
-    } else {
-      car.position.x += (Math.round(car.position.x / 100) * 100 - car.position.x) * 0.05;
-    }
-  }
-
+  // Camera follows from behind the car
   const cameraDistance = 60;
   const cameraHeight = 30;
   const camX = car.position.x + Math.sin(angle) * cameraDistance;
@@ -251,7 +241,7 @@ function animate() {
 updateTiles();
 animate();
 
-// Car control
+// Car speed handling
 let accelerating = false, braking = false;
 setInterval(() => {
   if (accelerating) speed = Math.min(speed + 0.1, maxSpeed);
@@ -273,7 +263,7 @@ document.getElementById('brake').addEventListener('touchend', () => braking = fa
 document.getElementById('brake').addEventListener('mousedown', () => braking = true);
 document.getElementById('brake').addEventListener('mouseup', () => braking = false);
 
-// Steering logic
+// Steering wheel logic
 const steering = document.getElementById('steering');
 
 function getAngle(e, cx, cy) {
@@ -309,6 +299,7 @@ function handleSteeringMove(e) {
 function handleSteeringEnd() {
   dragging = false;
 }
+
 steering.addEventListener('touchstart', handleSteeringStart);
 steering.addEventListener('touchmove', handleSteeringMove);
 steering.addEventListener('touchend', handleSteeringEnd);
@@ -316,7 +307,7 @@ steering.addEventListener('mousedown', handleSteeringStart);
 window.addEventListener('mousemove', handleSteeringMove);
 window.addEventListener('mouseup', handleSteeringEnd);
 
-// Steering reset to center
+// Realistic steering wheel reset
 setInterval(() => {
   if (!dragging && currentRotation !== 0) {
     currentRotation *= 0.9;

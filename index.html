@@ -105,7 +105,6 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-<!-- Only showing the JS script part for brevity -->
 <script>
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
@@ -186,9 +185,6 @@ function updateTiles() {
   }
 }
 
-// 📌 New: Track the last tile key to detect when car enters a new one
-let lastTileKey = '';
-
 function checkCollision() {
   const carBox = new THREE.Box3().setFromObject(car);
   for (let b of buildings) {
@@ -208,63 +204,35 @@ function restartGame() {
   window.location.reload();
 }
 
-// 📌 New: Smooth alignment
-let targetRotation = null;
-let targetPosition = null;
-
 function animate() {
   requestAnimationFrame(animate);
 
   updateTiles();
   if (!isGameOver && checkCollision()) gameOver();
 
-  // 🚗 Car steering (manual if user is dragging)
+  // Steering
   if (Math.abs(steerAngle) > 0.001) {
     angle += steerAngle * (speed / 5);
   } else {
-    angle *= 0.92;
+    angle *= 0.95; // gradually straighten
   }
 
   car.rotation.y = angle;
   car.position.x -= Math.sin(angle) * speed;
   car.position.z -= Math.cos(angle) * speed;
 
-  // 📌 Detect if car entered new tile
-  const cx = Math.round(car.position.x / tileSize) * tileSize;
-  const cz = Math.round(car.position.z / tileSize) * tileSize;
-  const newKey = key(cx, cz);
-  if (newKey !== lastTileKey) {
-    lastTileKey = newKey;
-    // Determine new target rotation and center alignment
-    const dx = car.position.x - cx;
-    const dz = car.position.z - cz;
-
-    if (Math.abs(dz) > Math.abs(dx)) {
-      targetRotation = 0; // forward (Z axis)
-      targetPosition = { x: cx, z: car.position.z };
+  // Gradually return to center of current road (based on driving direction)
+  if (!dragging) {
+    if (Math.abs(Math.sin(angle)) > Math.abs(Math.cos(angle))) {
+      // Driving more along X axis → return to center Z
+      car.position.z += (Math.round(car.position.z / 100) * 100 - car.position.z) * 0.05;
     } else {
-      targetRotation = Math.PI / 2; // side (X axis)
-      targetPosition = { x: car.position.x, z: cz };
+      // Driving more along Z axis → return to center X
+      car.position.x += (Math.round(car.position.x / 100) * 100 - car.position.x) * 0.05;
     }
   }
 
-  // 📌 Smoothly rotate and align car to road direction
-  if (targetRotation !== null) {
-    let da = targetRotation - angle;
-    if (da > Math.PI) da -= 2 * Math.PI;
-    if (da < -Math.PI) da += 2 * Math.PI;
-    angle += da * 0.02;
-
-    car.position.x += (targetPosition.x - car.position.x) * 0.02;
-    car.position.z += (targetPosition.z - car.position.z) * 0.02;
-
-    if (Math.abs(da) < 0.01 && Math.abs(car.position.x - targetPosition.x) < 0.1 && Math.abs(car.position.z - targetPosition.z) < 0.1) {
-      targetRotation = null;
-      targetPosition = null;
-    }
-  }
-
-  // 📸 Smart Camera
+  // Camera
   const cameraDistance = 60;
   const cameraHeight = 30;
   const camX = car.position.x + Math.sin(angle) * cameraDistance;
@@ -298,7 +266,7 @@ document.getElementById('brake').addEventListener('touchend', () => braking = fa
 document.getElementById('brake').addEventListener('mousedown', () => braking = true);
 document.getElementById('brake').addEventListener('mouseup', () => braking = false);
 
-// Steering Wheel Control
+// Steering Wheel
 const steering = document.getElementById('steering');
 let dragging = false, currentRotation = 0, lastAngle = 0;
 
@@ -342,7 +310,7 @@ steering.addEventListener('mousedown', handleSteeringStart);
 window.addEventListener('mousemove', handleSteeringMove);
 window.addEventListener('mouseup', handleSteeringEnd);
 
-// Steering wheel auto-center
+// Auto-centering steering wheel
 setInterval(() => {
   if (!dragging && currentRotation !== 0) {
     currentRotation *= 0.9;

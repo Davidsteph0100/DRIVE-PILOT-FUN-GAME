@@ -1,9 +1,8 @@
-<!-- FULL HTML GAME BELOW -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Car Game</title>
+  <title>Car Game with GLB Car</title>
   <style>
     body { margin: 0; overflow: hidden; background: black; }
     canvas { display: block; }
@@ -106,7 +105,10 @@
     </div>
   </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
+
 <script>
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
@@ -123,6 +125,8 @@ const tileSize = 500;
 const tiles = new Map();
 const buildings = [];
 
+let car; // Will be set when GLB loads
+
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
@@ -134,12 +138,21 @@ sun.position.set(100, 200, 100);
 scene.add(sun);
 scene.add(new THREE.AmbientLight(0x404040, 1.5));
 
-const car = new THREE.Mesh(
-  new THREE.BoxGeometry(6, 2, 10),
-  new THREE.MeshStandardMaterial({ color: 0xffff00 })
+// Load GLB car
+const loader = new THREE.GLTFLoader();
+loader.load(
+  'https://raw.githubusercontent.com/Davidsteph0100/assets/main/brio_psx_style_han66st.glb',
+  function(gltf) {
+    car = gltf.scene;
+    car.position.set(0, 1, 10);
+    car.scale.set(2, 2, 2); // Adjust if needed
+    scene.add(car);
+  },
+  undefined,
+  function(error) {
+    console.error('GLB Load Error:', error);
+  }
 );
-car.position.set(0, 1, 10);
-scene.add(car);
 
 function key(x, z) {
   return `${x},${z}`;
@@ -180,6 +193,7 @@ function createTile(x, z) {
 }
 
 function updateTiles() {
+  if (!car) return;
   const cx = Math.round(car.position.x / tileSize) * tileSize;
   const cz = Math.round(car.position.z / tileSize) * tileSize;
   for (let dx of [-1, 0, 1]) {
@@ -190,6 +204,7 @@ function updateTiles() {
 }
 
 function checkCollision() {
+  if (!car) return false;
   const carBox = new THREE.Box3().setFromObject(car);
   for (let b of buildings) {
     const buildingBox = new THREE.Box3().setFromObject(b);
@@ -211,8 +226,13 @@ function restartGame() {
 function animate() {
   requestAnimationFrame(animate);
 
+  if (!car || isGameOver) {
+    renderer.render(scene, camera);
+    return;
+  }
+
   updateTiles();
-  if (!isGameOver && checkCollision()) gameOver();
+  if (checkCollision()) gameOver();
 
   if (Math.abs(steerAngle) > 0.001) {
     angle += steerAngle * (speed / 5);
@@ -233,7 +253,6 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-updateTiles();
 animate();
 
 // Speed logic

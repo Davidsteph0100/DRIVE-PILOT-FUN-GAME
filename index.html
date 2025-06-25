@@ -16,6 +16,7 @@
       align-items: center;
       padding: 0 20px;
       z-index: 10;
+      user-select: none;
     }
 
     #steering {
@@ -31,18 +32,17 @@
 
     .pedals {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       gap: 20px;
     }
 
     button {
       width: 120px;
       height: 80px;
-      font-size: 18px;
       border: none;
       border-radius: 12px;
       cursor: pointer;
-      color: white;
+      user-select: none;
     }
 
     #accelerate { background: green; }
@@ -90,8 +90,8 @@
 <body>
   <div id="controls">
     <div class="pedals">
-      <button id="brake">Brake</button>
-      <button id="accelerate">Accelerate</button>
+      <button id="brake"></button>
+      <button id="accelerate"></button>
     </div>
     <div id="steering"></div>
   </div>
@@ -217,7 +217,6 @@ function animate() {
   updateTiles();
   if (!isGameOver && checkCollision()) gameOver();
 
-  // Apply steering and movement
   if (Math.abs(steerAngle) > 0.001) {
     angle += steerAngle * (speed / 5);
   }
@@ -226,7 +225,6 @@ function animate() {
   car.position.x -= Math.sin(angle) * speed;
   car.position.z -= Math.cos(angle) * speed;
 
-  // Camera follows from behind the car
   const cameraDistance = 60;
   const cameraHeight = 30;
   const camX = car.position.x + Math.sin(angle) * cameraDistance;
@@ -263,7 +261,7 @@ document.getElementById('brake').addEventListener('touchend', () => braking = fa
 document.getElementById('brake').addEventListener('mousedown', () => braking = true);
 document.getElementById('brake').addEventListener('mouseup', () => braking = false);
 
-// Steering wheel logic
+// Steering logic
 const steering = document.getElementById('steering');
 
 function getAngle(e, cx, cy) {
@@ -307,7 +305,7 @@ steering.addEventListener('mousedown', handleSteeringStart);
 window.addEventListener('mousemove', handleSteeringMove);
 window.addEventListener('mouseup', handleSteeringEnd);
 
-// Realistic steering wheel reset
+// Smooth steering reset
 setInterval(() => {
   if (!dragging && currentRotation !== 0) {
     currentRotation *= 0.9;

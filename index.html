@@ -107,12 +107,28 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
+scene.background = new THREE.Color(0x87ceeb); // Sky blue
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  2000
+);
+
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+renderer.domElement.style.position = 'absolute';
+renderer.domElement.style.top = '0';
+renderer.domElement.style.left = '0';
+document.body.insertBefore(renderer.domElement, document.body.firstChild);
+
+// Handle window resize
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
 
 // Lighting
 const sun = new THREE.DirectionalLight(0xffffff, 1);
@@ -127,8 +143,6 @@ const car = new THREE.Mesh(
 );
 car.position.set(0, 1, 0);
 scene.add(car);
-  updateTiles();
-  
 
 let speed = 0, angle = 0, steerAngle = 0, isGameOver = false;
 const maxSpeed = 6;
@@ -216,25 +230,22 @@ function animate() {
   if (Math.abs(steerAngle) > 0.001) {
     angle += steerAngle * (speed / 5);
   } else {
-    angle *= 0.95; // gradually straighten
+    angle *= 0.95;
   }
 
   car.rotation.y = angle;
   car.position.x -= Math.sin(angle) * speed;
   car.position.z -= Math.cos(angle) * speed;
 
-  // Gradually return to center of current road (based on driving direction)
+  // Auto center to road
   if (!dragging) {
     if (Math.abs(Math.sin(angle)) > Math.abs(Math.cos(angle))) {
-      // Driving more along X axis → return to center Z
       car.position.z += (Math.round(car.position.z / 100) * 100 - car.position.z) * 0.05;
     } else {
-      // Driving more along Z axis → return to center X
       car.position.x += (Math.round(car.position.x / 100) * 100 - car.position.x) * 0.05;
     }
   }
 
-  // Camera
   const cameraDistance = 60;
   const cameraHeight = 30;
   const camX = car.position.x + Math.sin(angle) * cameraDistance;
@@ -245,6 +256,7 @@ function animate() {
 
   renderer.render(scene, camera);
 }
+updateTiles();
 animate();
 
 // Acceleration
@@ -258,6 +270,7 @@ setInterval(() => {
   }
 }, 50);
 
+// Buttons
 document.getElementById('accelerate').addEventListener('touchstart', () => accelerating = true);
 document.getElementById('accelerate').addEventListener('touchend', () => accelerating = false);
 document.getElementById('accelerate').addEventListener('mousedown', () => accelerating = true);
@@ -268,7 +281,7 @@ document.getElementById('brake').addEventListener('touchend', () => braking = fa
 document.getElementById('brake').addEventListener('mousedown', () => braking = true);
 document.getElementById('brake').addEventListener('mouseup', () => braking = false);
 
-// Steering Wheel
+// Steering
 const steering = document.getElementById('steering');
 let dragging = false, currentRotation = 0, lastAngle = 0;
 
@@ -312,7 +325,6 @@ steering.addEventListener('mousedown', handleSteeringStart);
 window.addEventListener('mousemove', handleSteeringMove);
 window.addEventListener('mouseup', handleSteeringEnd);
 
-// Auto-centering steering wheel
 setInterval(() => {
   if (!dragging && currentRotation !== 0) {
     currentRotation *= 0.9;

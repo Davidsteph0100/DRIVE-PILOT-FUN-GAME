@@ -109,21 +109,12 @@
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb); // Sky blue
 
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  2000
-);
-
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.domElement.style.position = 'absolute';
-renderer.domElement.style.top = '0';
-renderer.domElement.style.left = '0';
 document.body.insertBefore(renderer.domElement, document.body.firstChild);
 
-// Handle window resize
+// Resize fix
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
@@ -134,14 +125,14 @@ window.addEventListener('resize', () => {
 const sun = new THREE.DirectionalLight(0xffffff, 1);
 sun.position.set(100, 200, 100);
 scene.add(sun);
-scene.add(new THREE.AmbientLight(0x404040, 2));
+scene.add(new THREE.AmbientLight(0x404040, 1.5));
 
 // Car
 const car = new THREE.Mesh(
   new THREE.BoxGeometry(6, 2, 10),
   new THREE.MeshStandardMaterial({ color: 0xffff00 })
 );
-car.position.set(0, 1, 0);
+car.position.set(0, 1, 10);
 scene.add(car);
 
 let speed = 0, angle = 0, steerAngle = 0, isGameOver = false;
@@ -150,6 +141,7 @@ const tileSize = 500;
 const tiles = new Map();
 const buildings = [];
 
+// Generate road tiles
 function key(x, z) {
   return `${x},${z}`;
 }
@@ -157,7 +149,6 @@ function key(x, z) {
 function createTile(x, z) {
   if (tiles.has(key(x, z))) return;
 
-  // Z-Road
   const zRoad = new THREE.Mesh(
     new THREE.BoxGeometry(100, 1, tileSize),
     new THREE.MeshStandardMaterial({ color: 0x222222 })
@@ -165,7 +156,6 @@ function createTile(x, z) {
   zRoad.position.set(x, -0.5, z);
   scene.add(zRoad);
 
-  // X-Road
   const xRoad = new THREE.Mesh(
     new THREE.BoxGeometry(tileSize, 1, 100),
     new THREE.MeshStandardMaterial({ color: 0x222222 })
@@ -193,7 +183,6 @@ function createTile(x, z) {
 function updateTiles() {
   const cx = Math.round(car.position.x / tileSize) * tileSize;
   const cz = Math.round(car.position.z / tileSize) * tileSize;
-
   for (let dx of [-1, 0, 1]) {
     for (let dz of [-1, 0, 1]) {
       createTile(cx + dx * tileSize, cz + dz * tileSize);
@@ -226,7 +215,6 @@ function animate() {
   updateTiles();
   if (!isGameOver && checkCollision()) gameOver();
 
-  // Steering
   if (Math.abs(steerAngle) > 0.001) {
     angle += steerAngle * (speed / 5);
   } else {
@@ -237,7 +225,6 @@ function animate() {
   car.position.x -= Math.sin(angle) * speed;
   car.position.z -= Math.cos(angle) * speed;
 
-  // Auto center to road
   if (!dragging) {
     if (Math.abs(Math.sin(angle)) > Math.abs(Math.cos(angle))) {
       car.position.z += (Math.round(car.position.z / 100) * 100 - car.position.z) * 0.05;
@@ -256,10 +243,11 @@ function animate() {
 
   renderer.render(scene, camera);
 }
+
 updateTiles();
 animate();
 
-// Acceleration
+// Car control
 let accelerating = false, braking = false;
 setInterval(() => {
   if (accelerating) speed = Math.min(speed + 0.1, maxSpeed);
@@ -325,6 +313,7 @@ steering.addEventListener('mousedown', handleSteeringStart);
 window.addEventListener('mousemove', handleSteeringMove);
 window.addEventListener('mouseup', handleSteeringEnd);
 
+// Steering auto reset
 setInterval(() => {
   if (!dragging && currentRotation !== 0) {
     currentRotation *= 0.9;

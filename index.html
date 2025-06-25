@@ -105,9 +105,9 @@
     </div>
   </div>
 
-  <!-- Correct script order -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.min.js"></script>
+  <!-- ✅ FIXED Three.js version for GLTFLoader compatibility -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.136.0/examples/js/loaders/GLTFLoader.js"></script>
 
   <script>
     const scene = new THREE.Scene();

@@ -1,3 +1,4 @@
+<!-- FULL HTML GAME BELOW -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,6 +44,7 @@
       border-radius: 12px;
       cursor: pointer;
       user-select: none;
+      touch-action: none;
     }
 
     #accelerate { background: green; }
@@ -163,7 +165,7 @@ function createTile(x, z) {
   const colors = [0x66aaff, 0x66ff66, 0xaa7744, 0xaa66cc];
   for (let i = 0; i < 16; i++) {
     const bx = x + (i % 4 < 2 ? -80 : 80) + (Math.random() * 80 - 40);
-    const bz = z + (i % 2 === 0 ? -80 : 80) + (Math.random() * 80 - 40);
+    const bz = z + (i % 4 < 2 ? -80 : 80) + (Math.random() * 80 - 40);
     const h = 200 + Math.random() * 200;
     const building = new THREE.Mesh(
       new THREE.BoxGeometry(20, h, 20),
@@ -175,6 +177,16 @@ function createTile(x, z) {
   }
 
   tiles.set(key(x, z), true);
+}
+
+function updateTiles() {
+  const cx = Math.round(car.position.x / tileSize) * tileSize;
+  const cz = Math.round(car.position.z / tileSize) * tileSize;
+  for (let dx of [-1, 0, 1]) {
+    for (let dz of [-1, 0, 1]) {
+      createTile(cx + dx * tileSize, cz + dz * tileSize);
+    }
+  }
 }
 
 function checkCollision() {
@@ -236,17 +248,17 @@ setInterval(() => {
 }, 50);
 
 // Pedal controls
-document.getElementById('accelerate').addEventListener('touchstart', (e) => { accelerating = true; });
-document.getElementById('accelerate').addEventListener('touchend', () => { accelerating = false; });
+document.getElementById('accelerate').addEventListener('touchstart', e => { e.preventDefault(); accelerating = true; }, { passive: false });
+document.getElementById('accelerate').addEventListener('touchend', e => { e.preventDefault(); accelerating = false; }, { passive: false });
+document.getElementById('brake').addEventListener('touchstart', e => { e.preventDefault(); braking = true; }, { passive: false });
+document.getElementById('brake').addEventListener('touchend', e => { e.preventDefault(); braking = false; }, { passive: false });
+
 document.getElementById('accelerate').addEventListener('mousedown', () => { accelerating = true; });
 document.getElementById('accelerate').addEventListener('mouseup', () => { accelerating = false; });
-
-document.getElementById('brake').addEventListener('touchstart', (e) => { braking = true; });
-document.getElementById('brake').addEventListener('touchend', () => { braking = false; });
 document.getElementById('brake').addEventListener('mousedown', () => { braking = true; });
 document.getElementById('brake').addEventListener('mouseup', () => { braking = false; });
 
-// Steering with multi-touch support
+// Steering
 const steering = document.getElementById('steering');
 let dragging = false;
 let steerTouchId = null;
@@ -261,7 +273,6 @@ function handleSteeringStart(e) {
   const rect = steering.getBoundingClientRect();
   const cx = rect.left + rect.width / 2;
   const cy = rect.top + rect.height / 2;
-
   if (e.touches) {
     const touch = e.changedTouches[0];
     steerTouchId = touch.identifier;
@@ -274,16 +285,13 @@ function handleSteeringStart(e) {
 
 function handleSteeringMove(e) {
   if (!dragging) return;
-
   const rect = steering.getBoundingClientRect();
   const cx = rect.left + rect.width / 2;
   const cy = rect.top + rect.height / 2;
-
   const angleNow = getAngle(e, cx, cy);
   let delta = angleNow - lastAngle;
   if (delta > Math.PI) delta -= 2 * Math.PI;
   if (delta < -Math.PI) delta += 2 * Math.PI;
-
   currentRotation += delta * 180 / Math.PI;
   currentRotation = Math.max(-180, Math.min(180, currentRotation));
   steering.style.transform = `rotate(${currentRotation}deg)`;
@@ -310,7 +318,7 @@ steering.addEventListener('mousedown', handleSteeringStart);
 window.addEventListener('mousemove', handleSteeringMove);
 window.addEventListener('mouseup', handleSteeringEnd);
 
-// Smooth steering reset
+// Steering Reset
 setInterval(() => {
   if (!dragging && currentRotation !== 0) {
     currentRotation *= 0.9;

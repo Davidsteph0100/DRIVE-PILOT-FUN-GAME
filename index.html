@@ -161,9 +161,9 @@ function createTile(x, z) {
   scene.add(xRoad);
 
   const colors = [0x66aaff, 0x66ff66, 0xaa7744, 0xaa66cc];
-  for (let i = 0; i < 4; i++) {
-    const bx = x + (i < 2 ? -80 : 80) + (Math.random() * 40 - 20);
-    const bz = z + (i % 2 === 0 ? -80 : 80) + (Math.random() * 40 - 20);
+  for (let i = 0; i < 16; i++) {
+    const bx = x + (i % 4 < 2 ? -80 : 80) + (Math.random() * 80 - 40);
+    const bz = z + (i % 2 === 0 ? -80 : 80) + (Math.random() * 80 - 40);
     const h = 200 + Math.random() * 200;
     const building = new THREE.Mesh(
       new THREE.BoxGeometry(20, h, 20),
@@ -175,16 +175,6 @@ function createTile(x, z) {
   }
 
   tiles.set(key(x, z), true);
-}
-
-function updateTiles() {
-  const cx = Math.round(car.position.x / tileSize) * tileSize;
-  const cz = Math.round(car.position.z / tileSize) * tileSize;
-  for (let dx of [-1, 0, 1]) {
-    for (let dz of [-1, 0, 1]) {
-      createTile(cx + dx * tileSize, cz + dz * tileSize);
-    }
-  }
 }
 
 function checkCollision() {

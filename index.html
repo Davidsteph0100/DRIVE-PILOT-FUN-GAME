@@ -127,6 +127,8 @@ const car = new THREE.Mesh(
 );
 car.position.set(0, 1, 0);
 scene.add(car);
+  updateTiles();
+  
 
 let speed = 0, angle = 0, steerAngle = 0, isGameOver = false;
 const maxSpeed = 6;

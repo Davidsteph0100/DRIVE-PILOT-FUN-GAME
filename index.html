@@ -142,7 +142,7 @@
   'https://raw.githubusercontent.com/Davidsteph0100/assets/main/brio_psx_style_han66st.glb',
   function(gltf) {
     car = gltf.scene;
-    car.rotation.y = 0; // or try Math.PI / 2 if needed
+    car.rotation.y = Math.PI; // or try Math.PI / 2 if needed
     car.position.set(0, 1, 10);
     car.scale.set(2, 2, 2);
     scene.add(car);
@@ -182,7 +182,7 @@
         const building = new THREE.Mesh(
           new THREE.BoxGeometry(20, h, 20),
           new THREE.MeshStandardMaterial({ color: colors[i % colors.length] })
-        );
+  
         building.position.set(bx, h / 2, bz);
         scene.add(building);
         buildings.push(building);

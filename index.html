@@ -141,7 +141,11 @@
       'https://raw.githubusercontent.com/Davidsteph0100/assets/main/brio_psx_style_han66st.glb',
       function(gltf) {
         car = gltf.scene;
-        car.rotation.y = Math.PI * 1.5; // ✅ Car now faces forward
+
+        // ✅ Use degrees for easy adjustment
+        const rotationInDegrees = 180; // 👈 Change this to 0, 90, 270 etc
+        car.rotation.y = rotationInDegrees * (Math.PI / 180);
+
         car.position.set(0, 1, 10);
         car.scale.set(2, 2, 2);
         car.traverse(child => {

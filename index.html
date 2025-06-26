@@ -105,7 +105,6 @@
     </div>
   </div>
 
-  <!-- ✅ FIXED Three.js version for GLTFLoader compatibility -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.136.0/examples/js/loaders/GLTFLoader.js"></script>
 
@@ -138,20 +137,20 @@
     scene.add(new THREE.AmbientLight(0x404040, 1.5));
 
     const loader = new THREE.GLTFLoader();
-  loader.load(
-  'https://raw.githubusercontent.com/Davidsteph0100/assets/main/brio_psx_style_han66st.glb',
-  function(gltf) {
-    car = gltf.scene;
-    car.rotation.y = Math.PI; // or try Math.PI / 2 if needed
-    car.position.set(0, 1, 10);
-    car.scale.set(2, 2, 2);
-    scene.add(car);
-  },
-  undefined,
-  function(error) {
-    console.error('GLB Load Error:', error);
-  }
-);
+    loader.load(
+      'https://raw.githubusercontent.com/Davidsteph0100/assets/main/brio_psx_style_han66st.glb',
+      function(gltf) {
+        car = gltf.scene;
+        car.rotation.y = Math.PI;
+        car.position.set(0, 1, 10);
+        car.scale.set(2, 2, 2);
+        scene.add(car);
+      },
+      undefined,
+      function(error) {
+        console.error('GLB Load Error:', error);
+      }
+    );
 
     function key(x, z) {
       return `${x},${z}`;
@@ -183,7 +182,6 @@
           new THREE.BoxGeometry(20, h, 20),
           new THREE.MeshStandardMaterial({ color: colors[i % colors.length] })
         );
-  
         building.position.set(bx, h / 2, bz);
         scene.add(building);
         buildings.push(building);

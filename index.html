@@ -141,7 +141,7 @@
       'https://raw.githubusercontent.com/Davidsteph0100/assets/main/brio_psx_style_han66st.glb',
       function(gltf) {
         car = gltf.scene;
-        car.rotation.y = Math.PI / 2; // ✅ Car now faces forward
+        car.rotation.y = Math.PI / 1.5; // ✅ Car now faces forward
         car.position.set(0, 1, 10);
         car.scale.set(2, 2, 2);
         car.traverse(child => {
